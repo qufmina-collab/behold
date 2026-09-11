@@ -1127,16 +1127,34 @@ async function chooseDriveFolder(){
 }
 
 function deptSettingsKey(d){return `settings:${d||'infant'}`}
+async function fetchPublicSettings(){
+  try{
+    const r=await fetch(BEHOLD_DATA_API+'?action=settings&t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const j=await r.json();
+    const cfg=j?.settings||{};
+    state.departmentSettings.infant={mainBackground:cfg.preschoolBackground||null};
+    state.departmentSettings.elementary={mainBackground:cfg.elementaryBackground||null};
+    return true;
+  }catch(e){console.error('[BEHOLD] 공용 배경 불러오기 실패',e);return false}
+}
 async function loadDepartmentSettings(d){
-  const saved=await dbGet(deptSettingsKey(d));
-  const cfg=saved&&typeof saved==='object'?saved:{};
-  state.departmentSettings[d]={mainBackground:cfg.mainBackground||null};
-  state.mainBackground=state.departmentSettings[d].mainBackground;
+  await fetchPublicSettings();
+  state.mainBackground=(state.departmentSettings[d]||{}).mainBackground||null;
 }
 async function saveDepartmentSettings(){
   const d=state.department||'infant';
   state.departmentSettings[d]={mainBackground:state.mainBackground||null};
-  await dbSet(deptSettingsKey(d),state.departmentSettings[d]);
+  const settings={};
+  settings[d==='elementary'?'elementaryBackground':'preschoolBackground']=state.mainBackground||'';
+  const r=await fetch(BEHOLD_DATA_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'saveSettings',settings})});
+  if(!r.ok)throw new Error(`배경 저장 실패 (HTTP ${r.status})`);
+  const j=await r.json();
+  if(!j?.success)throw new Error(j?.message||'배경 저장 실패');
+  const cfg=j.settings||{};
+  state.departmentSettings.infant={mainBackground:cfg.preschoolBackground||null};
+  state.departmentSettings.elementary={mainBackground:cfg.elementaryBackground||null};
+  state.mainBackground=(state.departmentSettings[d]||{}).mainBackground||null;
 }
 function deptOf(w){return w.department||'infant'}
 function deptLabel(d){return d==='elementary'?'초등부':'유아부'}
@@ -1417,7 +1435,7 @@ function renderAdminTab(t){
    let pendingMainBg=state.mainBackground;
    b.innerHTML=`<section class="panel admin-clean-panel admin-spaced-panel"><h2>${deptLabel(state.department)} 배경 설정</h2><p class="hint">현재 부서의 메인 화면 배경만 변경해요.</p><input type="file" id="mainBgFile" accept="image/*"><div id="mainBgPreview" style="margin-top:12px">${state.mainBackground?`<img src="${state.mainBackground}" alt="현재 배경" style="max-width:100%;border-radius:16px">`:''}</div><button class="primary" id="mainBgApply" style="margin-top:14px">배경 적용</button></section>`;
    $('#mainBgFile').onchange=e=>{const f=e.target.files?.[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{pendingMainBg=fr.result;$('#mainBgPreview').innerHTML=`<img src="${pendingMainBg}" alt="선택한 배경" style="max-width:100%;border-radius:16px">`};fr.readAsDataURL(f)};
-   $('#mainBgApply').onclick=async()=>{if(!pendingMainBg)return toast('배경 이미지를 먼저 선택해주세요.');state.mainBackground=pendingMainBg;await saveDepartmentSettings();toast(`${deptLabel(state.department)} 메인 배경을 적용했어요!`);state.adminTab='background';setTimeout(()=>renderAdmin('background'),250)};
+   $('#mainBgApply').onclick=async()=>{if(!pendingMainBg)return toast('배경 이미지를 먼저 선택해주세요.');try{state.mainBackground=pendingMainBg;await saveDepartmentSettings();toast(`${deptLabel(state.department)} 메인 배경을 모든 기기에 적용했어요!`);state.adminTab='background';setTimeout(()=>renderAdmin('background'),250)}catch(e){console.error(e);toast('배경 저장에 실패했어요. 다시 시도해주세요.')}};
  }else{
    b.innerHTML=`<section class="panel admin-clean-panel admin-spaced-panel"><h2>비밀번호 변경</h2><label class="field"><span>현재 비밀번호</span><input id="oldPin" inputmode="numeric" maxlength="4"></label><label class="field"><span>새 비밀번호</span><input id="newPin" inputmode="numeric" maxlength="4"></label><label class="field"><span>새 비밀번호 확인</span><input id="newPin2" inputmode="numeric" maxlength="4"></label><button class="primary" id="pinChange">비밀번호 변경</button></section>`;
    $('#pinChange').onclick=()=>{if($('#oldPin').value!==state.pin)return toast('현재 비밀번호가 달라요.');if(!/^\d{4}$/.test($('#newPin').value))return toast('새 비밀번호는 숫자 4자리예요.');if($('#newPin').value!==$('#newPin2').value)return toast('새 비밀번호가 서로 달라요.');state.pin=$('#newPin').value;localStorage.setItem('behold-pin',state.pin);toast('비밀번호를 변경했어요.');state.adminTab='pin';setTimeout(()=>renderAdmin('pin'),250)};
