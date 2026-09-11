@@ -1494,6 +1494,61 @@ function drawDraft(){const host=$('#draftList'),settings=$('#selectedSettings');
 function openAnswerEditor(p){state.editorItem=p;const title=p.type==='line'?'선긋기 정답 연결':'정답 위치 지정';$('#answerTitle').textContent=title;const existing=p.type==='line'?(p.pairs||[]).flatMap((q,i)=>[{...q.a,alt:false,n:i+1},{...q.b,alt:true,n:i+1}]):(p.answers||[]).map((q,i)=>({...q,n:i+1}));$('#answerEditor').innerHTML=`<div class="answer-editor"><div class="answer-help">${p.type==='line'?'정답 한 쌍씩 <b>시작점 → 도착점</b> 순서로 터치하세요.':'이미지에서 정답 위치를 차례대로 터치하세요.'}</div><div class="answer-stage" id="answerStage"><img id="answerImg" src="${p.url}" alt="">${existing.map(d=>`<span class="dot ${d.alt?'alt':''}" style="left:${d.x*100}%;top:${d.y*100}%"></span>`).join('')}</div><div class="mini-actions"><button id="answerUndo">↶ 마지막 취소</button><button id="answerClear" class="danger">모두 지우기</button><button id="answerDone" class="primary">설정 완료</button></div></div>`;answerDialog.showModal();let pending=null;$('#answerStage').onclick=e=>{const r=$('#answerStage').getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;if(p.type==='line'){if(!pending){pending={x,y};toast('이제 연결될 도착점을 눌러주세요.')}else{p.pairs=p.pairs||[];p.pairs.push({a:pending,b:{x,y}});pending=null;openAnswerEditorRefresh(p)}}else{p.answers=p.answers||[];p.answers.push({x,y,r:.06});openAnswerEditorRefresh(p)}};$('#answerUndo').onclick=()=>{if(p.type==='line')p.pairs.pop();else p.answers.pop();openAnswerEditorRefresh(p)};$('#answerClear').onclick=()=>{p.pairs=[];p.answers=[];openAnswerEditorRefresh(p)};$('#answerDone').onclick=()=>{answerDialog.close();drawDraft()}}
 function openAnswerEditorRefresh(p){answerDialog.close();setTimeout(()=>openAnswerEditor(p),0)}
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
+// ===== v51: AppSheet / Google Sheets Apps Script API =====
+const BEHOLD_DATA_API='https://script.google.com/macros/s/AKfycbzu37WR-5TCfZaKE3H4SIk5VI9ueFOdr1C2P7ogO3oOW2oMf5C3HJAlv00-HEhfKYNC/exec';
+function apiActivityType(v){
+ const x=String(v||'').trim();
+ const map={'보기':'view','일반보기':'view','학습':'study','학습자료':'study','따라그리기':'trace','색칠':'color','색칠하기':'color','글쓰기':'write','따라쓰기':'write','선긋기':'line','찾기':'find','틀린/숨은그림':'find','OX/선택':'ox','OX':'ox','만들기':'craft'};
+ return map[x]||(['view','study','trace','color','write','line','find','ox','craft'].includes(x)?x:'view');
+}
+function apiDateInfo(v){
+ const raw=String(v||'').trim();
+ let d=null;
+ const iso=raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+ if(iso)d=new Date(+iso[1],+iso[2]-1,+iso[3],12);
+ else {const k=raw.match(/^(\d{1,2})[/.](\d{1,2})[/.](\d{4})/);if(k)d=new Date(+k[3],+k[1]-1,+k[2],12)}
+ if(!d||isNaN(d))d=new Date();
+ const y=d.getFullYear(),m=d.getMonth()+1,day=d.getDate();
+ const isoDate=`${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+ return {year:y,month:m,date:`${m}월 ${day}일`,isoDate,week:autoWeekNo(isoDate)};
+}
+function apiAnswerData(v){
+ if(!v)return {};
+ try{const x=typeof v==='string'?JSON.parse(v):v;return x&&typeof x==='object'?x:{}}catch(e){return {}}
+}
+function apiImage(v){
+ const x=String(v||'').trim();
+ if(!x)return '';
+ if(/^(https?:|data:|blob:)/i.test(x))return x;
+ // AppSheet normally stores an image as a Drive-relative path. v51 keeps the path;
+ // the API can later return a public/data URL without another front-end change.
+ return x;
+}
+function apiRowToWeek(r){
+ const di=apiDateInfo(r['날짜']);
+ const acts=Array.isArray(r['활동지'])?r['활동지']:[];
+ const pages=acts.map((a,i)=>{
+   const extra=apiAnswerData(a['정답데이터']);
+   const t=apiActivityType(a['활동유형']);
+   return {id:String(a['활동지ID']||`${r['자료ID']}-${i+1}`),title:extra.title||`${TYPE_LABEL[t]||'활동지'} ${i+1}`,kind:t==='study'?'study':'activity',type:t==='study'?'view':t,image:apiImage(a['활동지이미지']),answers:extra.answers||[],pairs:extra.pairs||[],craftImage:extra.craftImage||null,craftText:extra.craftText||'',rep:false,description:extra.description||''};
+ });
+ const rep=apiImage(r['홈대표이미지']);
+ if(pages.length&&!rep)pages[0].rep=true;
+ return {id:String(r['자료ID']||crypto.randomUUID()),year:di.year,month:di.month,week:di.week,date:di.date,isoDate:di.isoDate,passage:String(r['성경구절']||''),topic:String(r['주제']||''),short:String(r['짧은설명']||''),representative:rep||pages[0]?.image||'',department:String(r['부서']||'유아부').includes('초등')?'elementary':'infant',pages};
+}
+async function loadAppSheetWeeks(){
+ try{
+   const r=await fetch(BEHOLD_DATA_API,{cache:'no-store',redirect:'follow'});
+   if(!r.ok)throw new Error(`HTTP ${r.status}`);
+   const rows=await r.json();
+   if(!Array.isArray(rows))throw new Error('자료 형식 오류');
+   const remote=rows.map(apiRowToWeek).filter(w=>w.id&&w.pages.length);
+   if(!remote.length)return false;
+   const ids=new Set(remote.map(w=>w.id));
+   weeks=[...weeks.filter(w=>!ids.has(String(w.id))),...remote];
+   return true;
+ }catch(e){console.warn('[BEHOLD AppSheet API]',e);return false}
+}
 async function initApp(){
  await loadStorageSettings();
  const saved=await dbGet('weeks');if(Array.isArray(saved)&&saved.length)weeks=saved;
@@ -1505,6 +1560,7 @@ async function initApp(){
  state.departmentSettings.infant=infantSaved||{mainBackground:oldBg||null};
  state.departmentSettings.elementary=elementarySaved||{mainBackground:null};
  await loadRuntimeCloudConfig();
+ await loadAppSheetWeeks();
  const cloudLoaded=await publicCloudLoad();
  if(cloudLoaded){const i=state.departmentSettings.infant||{mainBackground:null},e=state.departmentSettings.elementary||{mainBackground:null};state.departmentSettings={infant:i,elementary:e}}
  state.mainBackground=null;state.department=null;renderDepartmentGate()
