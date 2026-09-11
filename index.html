@@ -922,6 +922,20 @@ body:not(.activity-view) #app{overflow:visible!important;height:auto!important;m
 .admin-instagram .panel,.manage-weeks{touch-action:pan-y!important}
 @media(min-width:768px){.admin-instagram{padding-bottom:max(54px,env(safe-area-inset-bottom))!important}}
 
+
+/* v37 weekday + child-friendly focal zoom */
+.weekday-tab{white-space:nowrap!important;word-break:keep-all!important;overflow:hidden!important}
+.weekday-tab .weekday-name{display:block;white-space:nowrap!important;font-size:inherit;line-height:1.15}
+.weekday-tab small{display:block;white-space:nowrap!important;margin-top:2px}
+.storage-status{padding:12px 14px;border-radius:14px;background:#f5f8fa;margin:10px 0;font-weight:800}
+.storage-status.ok{background:#ecfff1;color:#267441}.storage-status.warn{background:#fff7df;color:#805d00}
+.storage-note{font-size:13px;line-height:1.55;color:#65717d;margin-top:10px}
+
+
+/* ===== v38 Google Drive cloud sync ===== */
+.storage-grid{display:grid;gap:14px}.storage-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}.storage-actions .primary,.storage-actions .secondary{flex:1 1 170px;min-height:48px}.storage-status{margin:12px 0;padding:12px 14px;border-radius:14px;font-weight:900}.storage-status.ok{background:#eafbed;color:#25733c}.storage-status.warn{background:#fff7df;color:#8b651a}.storage-status.busy{background:#eaf5ff;color:#275f99}.storage-note{font-size:13px;line-height:1.55;color:#64717b}.storage-key-wrap{position:relative}.storage-key-wrap input{padding-right:72px!important}.storage-key-toggle{position:absolute;right:8px;bottom:8px;border:0;border-radius:10px;padding:8px 10px;background:#eef5f8;font-size:12px;font-weight:900;color:#526b79}.cloud-mini{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12px;color:#6c7a83}.cloud-dot{width:9px;height:9px;border-radius:50%;background:#f2b84b}.cloud-dot.ok{background:#45bb68}
+/* v38: weekday labels never wrap or shrink */
+.weekday-btn,.weekday-tab,.weekday-button,[data-weekday]{white-space:nowrap!important;word-break:keep-all!important;min-width:0!important}
 </style>
 </head>
 <body>
@@ -953,7 +967,7 @@ const week={id:'w35',year:2026,month:8,week:35,date:'8월 30일',passage:'사사
 {kind:'activity',type:'line',title:'활동지 5 · 알맞은 그림자 찾기',image:SAMPLE_IMAGES[4],pairs:[{a:{x:.385,y:.27},b:{x:.68,y:.60}},{a:{x:.385,y:.42},b:{x:.68,y:.73}},{a:{x:.385,y:.58},b:{x:.68,y:.89}},{a:{x:.385,y:.73},b:{x:.68,y:.42}},{a:{x:.385,y:.88},b:{x:.68,y:.27}}]}
 ]};
 let weeks=[week];
-const state={week,month:8,index:0,color:COLORS[0],found:0,lineStart:null,lines:[],fills:[],tracePoints:[],brushStrokes:[],activeBrush:null,brushSize:6,drawing:false,logoTaps:[],draft:[],pin:localStorage.getItem('behold-pin')||'4857',editorItem:null,adminSelected:0,editWeekId:null,repImage:null,mainBackground:null,department:null,departmentSettings:{infant:{mainBackground:null},elementary:{mainBackground:null}},sequence:[],sequencePos:0};
+const state={multiTouchActive:false,traceStrokeStart:null,week,month:8,index:0,color:COLORS[0],found:0,lineStart:null,lines:[],fills:[],tracePoints:[],brushStrokes:[],activeBrush:null,brushSize:6,drawing:false,logoTaps:[],draft:[],pin:localStorage.getItem('behold-pin')||'4857',editorItem:null,adminSelected:0,editWeekId:null,repImage:null,mainBackground:null,department:null,departmentSettings:{infant:{mainBackground:null},elementary:{mainBackground:null}},storage:{clientId:'434700776620-ani5vp4f7nfv26m29n9g0irg7qledg62.apps.googleusercontent.com',appId:'434700776620',folderId:'1iCHWojBMNoJTUXD38yDIIN1ooG9BsycC',folderUrl:'https://drive.google.com/drive/u/1/folders/1iCHWojBMNoJTUXD38yDIIN1ooG9BsycC',pickerApiKey:'',connected:false,metadataFileId:'',infantFolderId:'',elementaryFolderId:'',lastCloudSync:''},sequence:[],sequencePos:0};
 const app=$('#app'), searchDialog=$('#searchDialog'), pinDialog=$('#pinDialog'), answerDialog=$('#answerDialog');
 function typeLabel(t){return TYPE_LABEL[t]||'활동지'}
 const DB_NAME='behold-local-v1', STORE='app';
@@ -962,6 +976,68 @@ async function dbGet(k){try{const db=await openDB();return await new Promise((re
 async function dbSet(k,v){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(v,k);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
 async function dbDel(k){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(k);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
 async function persistWeeks(){await dbSet('weeks',weeks)}
+function driveFolderId(v){const m=String(v||'').match(/\/folders\/([A-Za-z0-9_-]+)/);return m?m[1]:String(v||'').trim()}
+async function saveStorageSettings(){await dbSet('storageSettings',state.storage)}
+async function loadStorageSettings(){const x=await dbGet('storageSettings');if(x&&typeof x==='object')state.storage={...state.storage,...x}}
+
+let driveAccessToken=null,driveTokenClient=null,googlePickerReady=false;
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+function loadScriptOnce(src){return new Promise((res,rej)=>{const old=[...document.scripts].find(x=>x.src===src);if(old){if((src.includes('gsi')&&window.google?.accounts?.oauth2)||(src.includes('api.js')&&window.gapi))return res();old.addEventListener('load',res,{once:true});old.addEventListener('error',rej,{once:true});return}const sc=document.createElement('script');sc.src=src;sc.async=true;sc.defer=true;sc.onload=res;sc.onerror=rej;document.head.appendChild(sc)})}
+async function ensureGooglePicker(){
+  await Promise.all([loadScriptOnce('https://accounts.google.com/gsi/client'),loadScriptOnce('https://apis.google.com/js/api.js')]);
+  if(!googlePickerReady)await new Promise((res,rej)=>{try{gapi.load('picker',{callback:()=>{googlePickerReady=true;res()},onerror:rej})}catch(e){rej(e)}});
+  return true;
+}
+async function loadRuntimeCloudConfig(){
+  try{const r=await fetch('/api/config',{cache:'no-store'});if(!r.ok)return;const c=await r.json();if(c?.googleApiKey&&!state.storage.pickerApiKey)state.storage.pickerApiKey=c.googleApiKey;if(c?.rootFolderId&&!state.storage.folderId){state.storage.folderId=c.rootFolderId;state.storage.folderUrl=`https://drive.google.com/drive/folders/${c.rootFolderId}`}}catch(e){}
+}
+function storageStatus(text,kind='warn'){const el=$('#driveStatus');if(el){el.className=`storage-status ${kind}`;el.textContent=text}}
+async function requestDriveToken(forceConsent=false){
+  await ensureGooglePicker();
+  const cid=(state.storage.clientId||'').trim();if(!cid)throw new Error('OAuth Client ID가 없어요.');
+  return await new Promise((res,rej)=>{
+    driveTokenClient=google.accounts.oauth2.initTokenClient({client_id:cid,scope:'https://www.googleapis.com/auth/drive.file',callback:r=>{if(r.error)return rej(new Error(r.error));driveAccessToken=r.access_token;res(driveAccessToken)}});
+    driveTokenClient.requestAccessToken({prompt:forceConsent?'consent':''});
+  })
+}
+async function authFetch(url,opt={}){if(!driveAccessToken)await requestDriveToken(false);const headers=new Headers(opt.headers||{});headers.set('Authorization',`Bearer ${driveAccessToken}`);const r=await fetch(url,{...opt,headers});if(r.status===401){driveAccessToken=null;await requestDriveToken(false);headers.set('Authorization',`Bearer ${driveAccessToken}`);return fetch(url,{...opt,headers})}return r}
+async function driveJson(url,opt={}){const r=await authFetch(url,opt);if(!r.ok){let msg='';try{msg=(await r.json())?.error?.message||''}catch(e){}throw new Error(msg||`Google Drive 오류 (${r.status})`)}return r.status===204?{}:r.json()}
+function qDrive(v){return encodeURIComponent(v)}
+async function driveList(q){return driveJson(`https://www.googleapis.com/drive/v3/files?q=${qDrive(q)}&spaces=drive&fields=files(id,name,mimeType,parents,webViewLink)&pageSize=1000`)}
+async function makePublic(id){try{await driveJson(`https://www.googleapis.com/drive/v3/files/${id}/permissions?fields=id`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:'reader',type:'anyone'})})}catch(e){if(!String(e.message).toLowerCase().includes('already'))throw e}}
+async function createFolder(name,parent){const x=await driveJson('https://www.googleapis.com/drive/v3/files?fields=id,name',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[parent]})});return x.id}
+async function ensureFolder(parent,name){const q=`'${parent}' in parents and trashed=false and mimeType='application/vnd.google-apps.folder' and name='${name.replace(/'/g,"\\'")}'`;const x=await driveList(q);return x.files?.[0]?.id||await createFolder(name,parent)}
+async function uploadBlobToDrive(blob,name,parent){
+ const meta={name,parents:[parent]};const boundary='behold_'+Math.random().toString(36).slice(2);const body=new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: ${blob.type||'application/octet-stream'}\r\n\r\n`,blob,`\r\n--${boundary}--`]);
+ const r=await authFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',{method:'POST',headers:{'Content-Type':`multipart/related; boundary=${boundary}`},body});if(!r.ok)throw new Error(`업로드 실패 (${r.status})`);const x=await r.json();await makePublic(x.id);return x.id
+}
+function publicDriveUrl(id){return `https://drive.google.com/uc?export=view&id=${id}`}
+function driveIdFromUrl(v){const s=String(v||'');let m=s.match(/[?&]id=([A-Za-z0-9_-]+)/);if(m)return m[1];m=s.match(/\/d\/([A-Za-z0-9_-]+)/);return m?m[1]:''}
+async function srcToBlob(src){if(!src)return null;if(src.startsWith('data:'))return fetch(src).then(r=>r.blob());if(src.startsWith('blob:'))return fetch(src).then(r=>r.blob());return null}
+function safeName(v){return String(v||'image').replace(/[\\/:*?"<>|]+/g,'-').slice(0,90)}
+async function cloudifySource(src,parent,name,cache){if(!src)return src;if(driveIdFromUrl(src)||/^https?:/.test(src))return src;if(cache.has(src))return cache.get(src);const blob=await srcToBlob(src);if(!blob)return src;const ext=(blob.type.split('/')[1]||'png').replace('jpeg','jpg');const id=await uploadBlobToDrive(blob,`${safeName(name)}.${ext}`,parent);const url=publicDriveUrl(id);cache.set(src,url);return url}
+async function updateMetadataFile(payload){
+ const root=state.storage.folderId;let id=state.storage.metadataFileId;const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+ if(!id){const x=await driveList(`'${root}' in parents and trashed=false and name='behold-data.json'`);id=x.files?.[0]?.id||''}
+ if(id){const r=await authFetch(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media&fields=id`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:blob});if(!r.ok)throw new Error(`메타데이터 저장 실패 (${r.status})`)}else{id=await uploadBlobToDrive(blob,'behold-data.json',root)}
+ await makePublic(id);state.storage.metadataFileId=id;return id
+}
+async function prepareCloudFolders(){const root=state.storage.folderId;if(!root)throw new Error('Drive 폴더를 먼저 선택해주세요.');state.storage.infantFolderId=await ensureFolder(root,'유아부');state.storage.elementaryFolderId=await ensureFolder(root,'초등부');try{await makePublic(root)}catch(e){}try{await makePublic(state.storage.infantFolderId);await makePublic(state.storage.elementaryFolderId)}catch(e){}await saveStorageSettings()}
+async function cloudSaveAll(showToast=true){
+ if(!state.storage.folderId)throw new Error('Drive 저장 폴더가 없어요.');storageStatus('Google Drive에 저장 중…','busy');if(!driveAccessToken)await requestDriveToken(false);await prepareCloudFolders();
+ const cache=new Map();for(const w of weeks){const folder=deptOf(w)==='elementary'?state.storage.elementaryFolderId:state.storage.infantFolderId;for(let i=0;i<(w.pages||[]).length;i++){const p=w.pages[i];p.image=await cloudifySource(p.image,folder,`${w.isoDate||w.date}-${i+1}-${p.title}`,cache);if(p.craftImage)p.craftImage=await cloudifySource(p.craftImage,folder,`${w.isoDate||w.date}-${i+1}-완성예시`,cache)}if(w.representative)w.representative=await cloudifySource(w.representative,folder,`${w.isoDate||w.date}-대표`,cache)}
+ for(const d of ['infant','elementary']){const cfg=state.departmentSettings[d]||{};if(cfg.mainBackground){const folder=d==='elementary'?state.storage.elementaryFolderId:state.storage.infantFolderId;cfg.mainBackground=await cloudifySource(cfg.mainBackground,folder,`${d}-메인배경`,cache)}}
+ const payload={version:2,updatedAt:new Date().toISOString(),weeks,departmentSettings:state.departmentSettings};await updateMetadataFile(payload);state.storage.connected=true;state.storage.lastCloudSync=payload.updatedAt;await Promise.all([persistWeeks(),dbSet(deptSettingsKey('infant'),state.departmentSettings.infant),dbSet(deptSettingsKey('elementary'),state.departmentSettings.elementary),saveStorageSettings()]);storageStatus('연결됨 · Google Drive 자동 저장 사용 중','ok');if(showToast)toast('Google Drive에 저장했어요.');return true
+}
+async function publicCloudLoad(){
+ const key=(state.storage.pickerApiKey||'').trim(),root=(state.storage.folderId||'').trim();if(!key||!root)return false;
+ try{const q=`'${root}' in parents and trashed=false and name='behold-data.json'`;const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=${qDrive(q)}&spaces=drive&fields=files(id,name,modifiedTime)&pageSize=10&key=${encodeURIComponent(key)}`,{cache:'no-store'});if(!r.ok)return false;const j=await r.json(),f=j.files?.[0];if(!f)return false;const m=await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&key=${encodeURIComponent(key)}`,{cache:'no-store'});if(!m.ok)return false;const data=await m.json();if(!Array.isArray(data.weeks))return false;weeks=data.weeks;state.departmentSettings={infant:{mainBackground:null},elementary:{mainBackground:null},...(data.departmentSettings||{})};state.storage.metadataFileId=f.id;state.storage.connected=true;await persistWeeks();await dbSet(deptSettingsKey('infant'),state.departmentSettings.infant||{mainBackground:null});await dbSet(deptSettingsKey('elementary'),state.departmentSettings.elementary||{mainBackground:null});await saveStorageSettings();return true}catch(e){return false}
+}
+async function chooseDriveFolder(){
+ const key=(state.storage.pickerApiKey||'').trim();if(!key)throw new Error('API 키를 먼저 입력해주세요.');await ensureGooglePicker();const token=await requestDriveToken(true);
+ return await new Promise((res,rej)=>{try{const view=new google.picker.DocsView(google.picker.ViewId.FOLDERS).setIncludeFolders(true).setSelectFolderEnabled(true).setMode(google.picker.DocsViewMode.LIST);const picker=new google.picker.PickerBuilder().addView(view).setOAuthToken(token).setDeveloperKey(key).setAppId(state.storage.appId||'434700776620').setTitle('BEHOLD 저장 폴더 선택').setCallback(async data=>{if(data[google.picker.Response.ACTION]===google.picker.Action.PICKED){const doc=data[google.picker.Response.DOCUMENTS][0],id=doc[google.picker.Document.ID];state.storage.folderId=id;state.storage.folderUrl=`https://drive.google.com/drive/folders/${id}`;state.storage.connected=true;await saveStorageSettings();res(id)}else if(data[google.picker.Response.ACTION]===google.picker.Action.CANCEL)res(null)}).build();picker.setVisible(true)}catch(e){rej(e)}})
+}
+
 function deptSettingsKey(d){return `settings:${d||'infant'}`}
 async function loadDepartmentSettings(d){
   const saved=await dbGet(deptSettingsKey(d));
@@ -1041,7 +1117,7 @@ const rep=isSamson?'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAVEAAAH5CAIAAA
   </section>
   <section class="section-card">
     <div class="section-head"><h2>🗓️ 이번 주 활동</h2><small>요일을 선택해요 ›</small></div>
-    <div class="week-tabs weekday-tabs">${weekdaySlots.map(x=>`<button class="week-tab weekday-tab ${x.item?.id===w.id?'active':''} ${x.item?'':'empty'}" ${x.item?`data-weekid="${x.item.id}"`:''}>${x.name.replace('요일','')}<br><small>${x.item?'요일':'미등록'}</small></button>`).join('')}</div>
+    <div class="week-tabs weekday-tabs">${weekdaySlots.map(x=>`<button class="week-tab weekday-tab ${x.item?.id===w.id?'active':''} ${x.item?'':'empty'}" ${x.item?`data-weekid="${x.item.id}"`:''}><span class="weekday-name">${x.name}</span>${x.item?'':'<small>미등록</small>'}</button>`).join('')}</div>
   </section>`;
   $$('[data-start]').forEach(b=>b.onclick=()=>startMode(b.dataset.start)); 
   $$('[data-m]').forEach(b=>b.onclick=()=>{state.month=+b.dataset.m;renderHome()}); 
@@ -1137,11 +1213,11 @@ function setupPinchZoom(p){
  let scale=1,panX=0,panY=0;
  const pointers=new Map();
  let gesture=null;
-
  const apply=()=>{stage.style.transform=`translate(${panX}px,${panY}px) scale(${scale})`};
+ const center=()=>{const r=viewport.getBoundingClientRect();return{x:r.width/2,y:r.height/2,left:r.left,top:r.top}};
  const clampPan=()=>{
    if(scale<=1.001){panX=0;panY=0;return}
-   const vr=viewport.getBoundingClientRect(),sr=stage.getBoundingClientRect();
+   const vr=viewport.getBoundingClientRect();
    const extraX=Math.max(0,(stage.offsetWidth*scale-vr.width)/2);
    const extraY=Math.max(0,(stage.offsetHeight*scale-vr.height)/2);
    panX=Math.max(-extraX,Math.min(extraX,panX));
@@ -1150,65 +1226,37 @@ function setupPinchZoom(p){
  const pts=()=>Array.from(pointers.values());
  const beginGesture=()=>{
    const a=pts();if(a.length<2)return;
+   state.multiTouchActive=true;
    const dx=a[1].x-a[0].x,dy=a[1].y-a[0].y;
-   gesture={dist:Math.hypot(dx,dy)||1,scale,panX,panY,cx:(a[0].x+a[1].x)/2,cy:(a[0].y+a[1].y)/2};
-   // If the first finger briefly started a drawing stroke, discard only that tiny accidental stroke.
-   if(p.type==='color'&&state.activeBrush){
-     if((state.activeBrush.points||[]).length<=3)state.brushStrokes.pop();
-     state.drawing=false;state.activeBrush=null;drawOverlay();
-   }
-   if((p.type==='trace'||p.type==='write')&&state.drawing){
-     const lastBreak=state.tracePoints.map(x=>x.brk).lastIndexOf(true);
-     if(lastBreak>=0&&state.tracePoints.length-lastBreak<=3)state.tracePoints.splice(lastBreak);
-     state.drawing=false;drawOverlay();
-   }
- };
- viewport.addEventListener('pointerdown',e=>{
-   if(e.pointerType==='mouse')return;
-   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-   if(pointers.size===2)beginGesture();
- },true);
- viewport.addEventListener('pointermove',e=>{
-   if(!pointers.has(e.pointerId))return;
-   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-   if(pointers.size<2||!gesture)return;
-   e.preventDefault();
-   const a=pts(),dx=a[1].x-a[0].x,dy=a[1].y-a[0].y;
-   const dist=Math.hypot(dx,dy)||1;
    const cx=(a[0].x+a[1].x)/2,cy=(a[0].y+a[1].y)/2;
-   scale=Math.max(1,Math.min(4,gesture.scale*(dist/gesture.dist)));
-   panX=gesture.panX+(cx-gesture.cx);
-   panY=gesture.panY+(cy-gesture.cy);
+   const c=center(),qx=cx-c.left-c.x,qy=cy-c.top-c.y;
+   gesture={dist:Math.hypot(dx,dy)||1,scale,contentX:(qx-panX)/scale,contentY:(qy-panY)/scale};
+   if(p.type==='color'&&state.activeBrush){if((state.activeBrush.points||[]).length<=3)state.brushStrokes.pop();state.drawing=false;state.activeBrush=null;drawOverlay()}
+   if((p.type==='trace'||p.type==='write')&&state.drawing){if(Number.isInteger(state.traceStrokeStart))state.tracePoints.splice(state.traceStrokeStart);state.drawing=false;state.traceStrokeStart=null;drawOverlay()}
+ };
+ viewport.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2)beginGesture()},true);
+ viewport.addEventListener('pointermove',e=>{
+   if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   if(pointers.size<2||!gesture)return;e.preventDefault();
+   const a=pts(),dx=a[1].x-a[0].x,dy=a[1].y-a[0].y,cx=(a[0].x+a[1].x)/2,cy=(a[0].y+a[1].y)/2;
+   const c=center(),qx=cx-c.left-c.x,qy=cy-c.top-c.y;
+   const nextScale=Math.max(1,Math.min(4,gesture.scale*((Math.hypot(dx,dy)||1)/gesture.dist)));
+   scale=nextScale;
+   // Keep the exact content under the children's two fingers in the same place.
+   panX=qx-gesture.contentX*scale;panY=qy-gesture.contentY*scale;
    clampPan();apply();
  },{capture:true,passive:false});
- const end=e=>{
-   pointers.delete(e.pointerId);
-   if(pointers.size<2)gesture=null;
-   if(pointers.size===1&&scale<=1.001){scale=1;panX=0;panY=0;apply()}
- };
- viewport.addEventListener('pointerup',end,true);
- viewport.addEventListener('pointercancel',end,true);
-
- // Double tap toggles 1x / 2x for easy reading without adding visible controls.
- let lastTap=0;
- viewport.addEventListener('pointerup',e=>{
-   if(e.pointerType==='mouse'||pointers.size)return;
-   const now=Date.now();
-   if(now-lastTap<320){
-     scale=scale>1.05?1:2;
-     panX=0;panY=0;clampPan();apply();lastTap=0;
-   }else lastTap=now;
- },true);
+ const end=e=>{pointers.delete(e.pointerId);if(pointers.size<2){gesture=null;state.multiTouchActive=false}if(scale<=1.001){scale=1;panX=0;panY=0;apply()}};
+ viewport.addEventListener('pointerup',end,true);viewport.addEventListener('pointercancel',end,true);
  apply();
 }
-
-function resetActivity(){state.found=0;state.lineStart=null;state.lines=[];state.fills=[];state.tracePoints=[];state.brushStrokes=[];state.activeBrush=null;state.drawing=false}
+function resetActivity(){state.found=0;state.lineStart=null;state.lines=[];state.fills=[];state.tracePoints=[];state.brushStrokes=[];state.activeBrush=null;state.drawing=false;state.multiTouchActive=false;state.traceStrokeStart=null}
 
 
 function move(d){if(state.sequence&&state.sequence.length){const np=state.sequencePos+d;if(np<0||np>=state.sequence.length)return;state.sequencePos=np;const cur=state.sequence[np];state.week=cur.week;state.month=cur.week.month;state.index=cur.index;renderPage();return}const ni=state.index+d;if(ni<0||ni>=state.week.pages.length)return;state.index=ni;renderPage()}
 function setupActivity(p){const stage=$('#stage'),img=$('#pageImg'),cv=$('#overlay');function fit(){const r=stage.getBoundingClientRect();cv.width=Math.max(1,Math.round(r.width*devicePixelRatio));cv.height=Math.max(1,Math.round(r.height*devicePixelRatio));cv.style.width=r.width+'px';cv.style.height=r.height+'px';drawOverlay()}img.onload=fit;new ResizeObserver(fit).observe(stage);if(p.kind==='study'||p.type==='craft'){cv.style.pointerEvents='none';return}
 if(p.type==='color'){const point=e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}};cv.addEventListener('pointerdown',e=>{state.drawing=true;cv.setPointerCapture(e.pointerId);state.activeBrush={erase:state.color===null,color:state.color||'#000',size:state.brushSize,points:[point(e)]};state.brushStrokes.push(state.activeBrush);drawOverlay()});cv.addEventListener('pointermove',e=>{if(!state.drawing||!state.activeBrush)return;state.activeBrush.points.push(point(e));drawOverlay()});const stop=()=>{state.drawing=false;state.activeBrush=null};cv.addEventListener('pointerup',stop);cv.addEventListener('pointercancel',stop);return}
-if(p.type==='trace'||p.type==='write'){cv.addEventListener('pointerdown',e=>{state.drawing=true;cv.setPointerCapture(e.pointerId);addTrace(e,true)});cv.addEventListener('pointermove',e=>{if(state.drawing)addTrace(e,false)});const stopTrace=()=>{state.drawing=false};cv.addEventListener('pointerup',stopTrace);cv.addEventListener('pointercancel',stopTrace);cv.addEventListener('lostpointercapture',stopTrace);return}
+if(p.type==='trace'||p.type==='write'){cv.addEventListener('pointerdown',e=>{if(state.multiTouchActive)return;state.traceStrokeStart=state.tracePoints.length;state.drawing=true;cv.setPointerCapture(e.pointerId);addTrace(e,true)});cv.addEventListener('pointermove',e=>{if(state.multiTouchActive)return;if(state.drawing)addTrace(e,false)});const stopTrace=()=>{state.drawing=false;state.traceStrokeStart=null};cv.addEventListener('pointerup',stopTrace);cv.addEventListener('pointercancel',stopTrace);cv.addEventListener('lostpointercapture',stopTrace);return}
 cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;if(p.type==='line')lineTap(p,x,y);if(p.type==='find'||p.type==='ox')checkPoint(p,x,y)})}
 function addTrace(e,brk=false){const cv=$('#overlay'),r=cv.getBoundingClientRect();state.tracePoints.push({x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height,brk});drawOverlay()}
 function lineTap(p,x,y){const pts=(p.pairs||[]).flatMap((q,i)=>[{...q.a,i,side:'a'},{...q.b,i,side:'b'}]);const hit=pts.find(q=>Math.hypot(x-q.x,y-q.y)<.075);if(!hit)return wrong(x,y);if(!state.lineStart){state.lineStart=hit;drawOverlay();return}if(hit.i===state.lineStart.i&&hit.side!==state.lineStart.side){state.lines.push([state.lineStart,hit]);state.lineStart=null;drawOverlay();}else{state.lineStart=null;wrong(x,y);drawOverlay()}}
@@ -1261,7 +1309,7 @@ $('#logoSecret').onclick=()=>{
     renderDepartmentGate();
   },650);
 };$('#pinForm').onsubmit=e=>{e.preventDefault();if($('#pinInput').value===state.pin){pinDialog.close();renderAdmin()}else $('#pinError').textContent='비밀번호가 올바르지 않아요.'};
-function renderAdmin(){document.body.classList.remove('department-gate-view');document.body.classList.remove('activity-view');document.documentElement.classList.remove('activity-view');window.scrollTo(0,0);  app.innerHTML=`<div class="admin-instagram"><div class="admin-appbar"><button class="admin-back" id="adminExit">‹</button><strong>${state.editWeekId?'자료 수정':'새 자료 등록'}</strong><button class="admin-share" id="adminPublish">${state.editWeekId?'수정':'게시'}</button></div><div class="admin-tabs"><button class="active" data-tab="upload">새로 등록</button><button data-tab="manage">자료 관리</button><button data-tab="background">배경 설정</button><button data-tab="pin">비밀번호 설정</button></div><div id="adminBody"></div></div>`;$('#adminExit').onclick=()=>{state.editWeekId=null;state.draft=[];state.repImage=null;renderHome()};$('#adminPublish').onclick=publishWeek;$$('[data-tab]').forEach(b=>b.onclick=()=>{$$('[data-tab]').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderAdminTab(b.dataset.tab)});renderAdminTab('upload')}
+function renderAdmin(){document.body.classList.remove('department-gate-view');document.body.classList.remove('activity-view');document.documentElement.classList.remove('activity-view');window.scrollTo(0,0);  app.innerHTML=`<div class="admin-instagram"><div class="admin-appbar"><button class="admin-back" id="adminExit">‹</button><strong>${state.editWeekId?'자료 수정':'새 자료 등록'}</strong><button class="admin-share" id="adminPublish">${state.editWeekId?'수정':'게시'}</button></div><div class="admin-tabs"><button class="active" data-tab="upload">새로 등록</button><button data-tab="manage">자료 관리</button><button data-tab="background">배경 설정</button><button data-tab="storage">저장소 설정</button><button data-tab="pin">비밀번호 설정</button></div><div id="adminBody"></div></div>`;$('#adminExit').onclick=()=>{state.editWeekId=null;state.draft=[];state.repImage=null;renderHome()};$('#adminPublish').onclick=publishWeek;$$('[data-tab]').forEach(b=>b.onclick=()=>{$$('[data-tab]').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderAdminTab(b.dataset.tab)});renderAdminTab('upload')}
 async function publishWeek(){
  const department=$('#metaDepartment')?.value||state.department||'infant',dv=$('#metaDate')?.value||'',passage=$('#metaPassage')?.value.trim()||'',topic=$('#metaTopic')?.value.trim()||'',short=$('#metaShort')?.value.trim()||'';
  if(!dv||!topic)return toast('날짜와 주제를 입력해주세요.');
@@ -1276,18 +1324,18 @@ async function publishWeek(){
  const ix=weeks.findIndex(x=>x.id===id||(!state.editWeekId&&deptOf(x)===department&&x.isoDate===dv));
  if(ix>=0)weeks[ix]=obj;else weeks.push(obj);
  await persistWeeks();state.week=obj;state.month=obj.month;state.editWeekId=null;state.draft=[];state.repImage=null;
- state.department=department;toast(`${deptLabel(department)} · ${day} 활동지를 저장했어요!`);setTimeout(renderHome,350)
+ state.department=department;if(state.storage.connected){try{await cloudSaveAll(false)}catch(e){console.error(e);toast('기기에는 저장했지만 Drive 저장은 다시 확인해주세요.')}}toast(`${deptLabel(department)} · ${day} 활동지를 저장했어요!`);setTimeout(renderHome,350)
 }
 function loadWeekForEdit(w){state.editWeekId=w.id;state.repImage=w.representative||null;state.draft=(w.pages||[]).map(p=>({id:p.id||crypto.randomUUID(),name:p.title,url:p.image,kind:p.kind,type:p.type,answers:p.answers||[],pairs:p.pairs||[],rep:!!p.rep,craftImage:p.craftImage||null,craftText:p.craftText||''}));state.adminSelected=0;renderAdmin()}
 function renderAdminTab(t){const b=$('#adminBody');if(t==='upload'){const w=state.editWeekId?weeks.find(x=>x.id===state.editWeekId):null;const iso=w?(w.isoDate||`${w.year}-${String(w.month).padStart(2,'0')}-${String(parseInt(w.date.match(/(\d+)일/)?.[1]||1)).padStart(2,'0')}`):'';b.innerHTML=`<main class="post-compose">
 <section class="post-section"><h3>사진 · 활동지</h3><div class="photo-tools"><label class="photo-picker"><span class="cam">📷</span><b><span id="photoCount">${state.draft.length}</span>/20</b><input id="files" type="file" accept="image/*" multiple hidden></label><div id="draftList" class="photo-strip"></div></div><p class="hint">학습자료와 활동지를 한 번에 올린 뒤, 각 사진을 눌러 종류를 따로 설정해요.</p><div id="selectedSettings"></div></section>
-<section class="post-section"><h3>부서</h3><label class="post-field department-field"><span>자료실</span><select id="metaDepartment"><option value="infant" ${(w?.department||state.department||'infant')==='infant'?'selected':''}>유아부</option><option value="elementary" ${(w?.department||state.department)==='elementary'?'selected':''}>초등부</option></select></label></section>
+<section class="post-section"><h3>부서</h3><label class="post-field department-field"><span>자료실</span><div class="department-fixed">${deptLabel(state.department)}</div><input id="metaDepartment" type="hidden" value="${state.department}"></label></section>
 <section class="post-section"><h3>날짜</h3><label class="post-field"><span>활동 날짜</span><input id="metaDate" type="date" value="${iso}"></label><div class="auto-week-info" id="autoWeekInfo">날짜를 선택하면 주차와 요일이 자동으로 정해져요.</div></section>
 <section class="post-section"><h3>말씀 정보</h3><label class="post-field"><span>성경구절</span><input id="metaPassage" placeholder="예: 사사기 13:1–16:31" value="${escapeHtml(w?.passage||'')}"></label><label class="post-field"><span>주제</span><input id="metaTopic" placeholder="예: 하나님의 이름을 높여요!" value="${escapeHtml(w?.topic||'')}"></label><label class="post-field"><span>짧은 설명</span><input id="metaShort" placeholder="예: 삼손 이야기" value="${escapeHtml(w?.short||'')}"></label></section>
 <section class="post-section character-section"><h3>홈 대표 이미지</h3><div class="rep-inline">${state.repImage?`<img src="${state.repImage}" alt="대표 이미지">`:''}<label class="photo-picker" style="width:76px;height:76px"><span class="cam">＋</span><b>이미지</b><input id="repFile" type="file" accept="image/*" hidden></label><div class="hint">따로 고르지 않으면 활동지에서 ‘홈 대표 이미지’로 지정한 사진을 사용해요.</div></div></section>
 <button class="publish-bottom" id="publishBottom">${state.editWeekId?'수정 완료':'게시 완료'}</button></main>`;const addFiles=(fileList)=>{const files=[...fileList].slice(0,Math.max(0,20-state.draft.length));files.forEach(f=>state.draft.push({id:crypto.randomUUID(),name:f.name,url:URL.createObjectURL(f),kind:'activity',type:'view',answers:[],pairs:[],rep:state.draft.length===0,craftImage:null,craftText:'주어진 종이를 오려서 이렇게 만들어 보세요!'}));if(files.length)state.adminSelected=Math.max(0,state.draft.length-files.length);drawDraft()};$('#files').onchange=e=>addFiles(e.target.files);
 const refreshAutoWeek=()=>{const el=$('#autoWeekInfo'),v=$('#metaDate')?.value;if(!el)return;if(!v){el.textContent='날짜를 선택하면 주차와 요일이 자동으로 정해져요.';return}const day=weekdayKo(v);el.textContent=`${autoWeekNo(v)}주차 · ${day} · 하루 1개 활동지`;};
-if($('#metaDate')){$('#metaDate').onchange=refreshAutoWeek;refreshAutoWeek();}$('#repFile').onchange=e=>{if(e.target.files[0]){state.repImage=URL.createObjectURL(e.target.files[0]);renderAdminTab('upload')}};$('#publishBottom').onclick=publishWeek;drawDraft()}else if(t==='manage'){b.innerHTML=`<section class="panel"><h2>${deptLabel(state.department)} 등록 자료</h2><div class="manage-weeks">${[...departmentWeeks()].sort((a,b)=>(b.year-a.year)||(b.week-a.week)).map(w=>`<div class="manage-week"><div class="grow"><b>${w.year} · ${w.weekday||''} · ${w.date}</b><small>${escapeHtml(w.topic)}</small></div><button class="edit-week" data-edit="${w.id}">수정</button><button class="delete-week" data-delete="${w.id}">삭제</button></div>`).join('')}</div></section>`;$$('[data-edit]').forEach(x=>x.onclick=()=>loadWeekForEdit(weeks.find(w=>w.id===x.dataset.edit)));$$('[data-delete]').forEach(x=>x.onclick=async()=>{const w=weeks.find(q=>q.id===x.dataset.delete);if(!w)return;if(!confirm(`${w.week}주차 자료를 삭제할까요?`))return;weeks=weeks.filter(q=>q.id!==w.id);await persistWeeks();state.week=latestWeek();renderAdminTab('manage')})}else if(t==='background'){
+if($('#metaDate')){$('#metaDate').onchange=refreshAutoWeek;refreshAutoWeek();}$('#repFile').onchange=e=>{if(e.target.files[0]){state.repImage=URL.createObjectURL(e.target.files[0]);renderAdminTab('upload')}};$('#publishBottom').onclick=publishWeek;drawDraft()}else if(t==='manage'){b.innerHTML=`<section class="panel"><h2>${deptLabel(state.department)} 등록 자료</h2><div class="manage-weeks">${[...departmentWeeks()].sort((a,b)=>(b.year-a.year)||(b.week-a.week)).map(w=>`<div class="manage-week"><div class="grow"><b>${w.year} · ${w.weekday||''} · ${w.date}</b><small>${escapeHtml(w.topic)}</small></div><button class="edit-week" data-edit="${w.id}">수정</button><button class="delete-week" data-delete="${w.id}">삭제</button></div>`).join('')}</div></section>`;$$('[data-edit]').forEach(x=>x.onclick=()=>loadWeekForEdit(weeks.find(w=>w.id===x.dataset.edit)));$$('[data-delete]').forEach(x=>x.onclick=async()=>{const w=weeks.find(q=>q.id===x.dataset.delete);if(!w)return;if(!confirm(`${w.week}주차 자료를 삭제할까요?`))return;weeks=weeks.filter(q=>q.id!==w.id);await persistWeeks();if(state.storage.connected){try{await cloudSaveAll(false)}catch(e){console.error(e)}}state.week=latestWeek();renderAdminTab('manage')})}else if(t==='background'){
   b.innerHTML=`<section class="panel admin-clean-panel admin-spaced-panel background-settings-panel">
     <h2>${deptLabel(state.department)} 메인 배경 설정</h2>
     <p class="hint">현재 들어와 있는 ${deptLabel(state.department)} 자료실에만 적용돼요.</p>
@@ -1316,14 +1364,35 @@ if($('#metaDate')){$('#metaDate').onchange=refreshAutoWeek;refreshAutoWeek();}$(
     if(!pendingMainBg)return toast('배경 이미지를 먼저 선택해주세요.');
     state.mainBackground=pendingMainBg;
     await saveDepartmentSettings();
+    if(state.storage.connected){try{await cloudSaveAll(false)}catch(e){console.error(e)}}
     toast(`${deptLabel(state.department)} 메인 배경을 적용했어요!`);
   };
+ }else if(t==='storage'){
+ const connected=state.storage.connected&&state.storage.metadataFileId;
+ b.innerHTML=`<section class="panel admin-clean-panel admin-spaced-panel"><h2>Google Drive 저장소</h2>
+ <p class="hint">활동지와 설정을 Drive에 저장해 휴대폰·태블릿·PC에서 같은 자료를 사용해요. 저장 폴더는 나중에 변경할 수 있어요.</p>
+ <div class="storage-grid">
+ <label class="field"><span>Drive 폴더</span><input id="driveFolderUrl" value="${escapeHtml(state.storage.folderUrl||'')}" placeholder="폴더 선택 버튼으로 연결하세요"></label>
+ <label class="field"><span>OAuth Client ID</span><input id="driveClientId" value="${escapeHtml(state.storage.clientId||'')}"></label>
+ <label class="field storage-key-wrap"><span>Google API 키</span><input id="driveApiKey" type="password" value="${escapeHtml(state.storage.pickerApiKey||'')}" autocomplete="off" placeholder="Google Cloud에서 만든 API 키"><button type="button" class="storage-key-toggle" id="toggleApiKey">보기</button></label>
+ </div>
+ <div class="storage-status ${connected?'ok':'warn'}" id="driveStatus">${connected?'연결됨 · Google Drive 자동 저장 사용 중':'아직 Drive 폴더 연결이 필요해요.'}</div>
+ <div class="storage-actions"><button class="secondary" id="saveDriveSettings">설정 저장</button><button class="primary" id="pickDriveFolder">Google Drive 연결 · 폴더 선택</button><button class="primary" id="cloudSyncNow">지금 동기화</button></div>
+ <div class="cloud-mini"><span class="cloud-dot ${connected?'ok':''}"></span><span>${state.storage.lastCloudSync?'마지막 저장 '+new Date(state.storage.lastCloudSync).toLocaleString('ko-KR'):'첫 연결 시 현재 자료를 Drive로 옮겨요.'}</span></div>
+ <p class="storage-note">API 키는 이 브라우저에 저장돼요. Vercel의 <b>BEHOLD_GOOGLE_API_KEY</b> 환경변수에도 같은 키를 넣으면 일반 이용자 기기에서도 클라우드 자료를 자동으로 불러와요.</p>
+ </section>`;
+ const saveFields=async()=>{const u=$('#driveFolderUrl').value.trim();state.storage.folderUrl=u;state.storage.folderId=driveFolderId(u)||state.storage.folderId;state.storage.clientId=$('#driveClientId').value.trim();state.storage.pickerApiKey=$('#driveApiKey').value.trim();await saveStorageSettings()};
+ $('#toggleApiKey').onclick=()=>{const i=$('#driveApiKey');i.type=i.type==='password'?'text':'password';$('#toggleApiKey').textContent=i.type==='password'?'보기':'숨기기'};
+ $('#saveDriveSettings').onclick=async()=>{await saveFields();toast('Drive 설정을 저장했어요.')};
+ $('#pickDriveFolder').onclick=async()=>{try{await saveFields();storageStatus('Google 계정 연결 중…','busy');const id=await chooseDriveFolder();if(!id){storageStatus('폴더 선택을 취소했어요.','warn');return}$('#driveFolderUrl').value=state.storage.folderUrl;storageStatus('폴더 연결 완료 · 첫 동기화 중…','busy');await cloudSaveAll(true);renderAdminTab('storage')}catch(e){console.error(e);storageStatus('연결 실패: '+e.message,'warn')}};
+ $('#cloudSyncNow').onclick=async()=>{try{await saveFields();await cloudSaveAll(true);renderAdminTab('storage')}catch(e){console.error(e);storageStatus('동기화 실패: '+e.message,'warn')}};
 }else{b.innerHTML=`<section class="panel admin-clean-panel admin-spaced-panel"><h2>비밀번호 변경</h2><label class="field"><span>현재 비밀번호</span><input id="oldPin" inputmode="numeric" maxlength="4"></label><label class="field"><span>새 비밀번호</span><input id="newPin" inputmode="numeric" maxlength="4"></label><label class="field"><span>새 비밀번호 확인</span><input id="newPin2" inputmode="numeric" maxlength="4"></label><button class="primary" id="pinChange">비밀번호 변경</button></section>`;$('#pinChange').onclick=()=>{if($('#oldPin').value!==state.pin)return toast('현재 비밀번호가 달라요.');if(!/^\d{4}$/.test($('#newPin').value))return toast('새 비밀번호는 숫자 4자리예요.');if($('#newPin').value!==$('#newPin2').value)return toast('새 비밀번호가 서로 달라요.');state.pin=$('#newPin').value;localStorage.setItem('behold-pin',state.pin);toast('비밀번호를 변경했어요.')}}}
 function drawDraft(){const host=$('#draftList'),settings=$('#selectedSettings');if(!host||!settings)return;const count=$('#photoCount');if(count)count.textContent=state.draft.length;if(!state.draft.length){host.innerHTML=`<div class="empty-inline">아직 추가된 사진이 없어요.</div>`;settings.innerHTML='';return}state.adminSelected=Math.min(state.adminSelected,state.draft.length-1);const p=state.draft[state.adminSelected];host.innerHTML=state.draft.map((x,i)=>`<button class="photo-thumb ${i===state.adminSelected?'active':''}" data-select="${i}" draggable="true" data-id="${x.id}"><img src="${x.url}" alt=""><span class="num">${i+1}</span><span class="kind">${x.kind==='study'?'학습':typeLabel(x.type)}</span></button>`).join('');settings.innerHTML=`<div class="selected-box"><div class="selected-head"><b>${state.adminSelected+1}. ${escapeHtml(p.name)}</b><span>${state.adminSelected+1}/${state.draft.length}</span></div><div class="selected-body"><div class="setting-row"><span>자료 구분</span><select id="selKind"><option value="study" ${p.kind==='study'?'selected':''}>학습자료</option><option value="activity" ${p.kind==='activity'?'selected':''}>활동지</option></select></div>${p.kind==='activity'?`<div class="setting-row"><span>활동 유형</span><select id="selType">${['view','trace','color','write','line','find','ox','craft'].map(t=>`<option value="${t}" ${p.type===t?'selected':''}>${typeLabel(t)}</option>`).join('')}</select></div>`:''}<div class="setting-row"><span>홈 대표 이미지</span><input type="checkbox" id="selRep" ${p.rep?'checked':''}></div>${p.kind==='activity'&&['line','find','ox'].includes(p.type)?`<button class="answer-button" id="setAnswer">🎯 정답 설정 · ${p.type==='line'?(p.pairs?.length||0)+'쌍':(p.answers?.length||0)+'개'}</button>`:''}${p.kind==='activity'&&p.type==='craft'?`<div class="craft-extra-v9"><b>✂️ 완성 예시 이미지</b><input type="file" id="craftFile" accept="image/*"><textarea id="craftText" rows="3">${p.craftText||''}</textarea></div>`:''}<div class="order-mini"><button id="moveLeft">‹ 앞 순서</button><button id="moveRight">뒤 순서 ›</button></div><button class="delete-image" id="deleteSelected">이 이미지 삭제</button></div></div>`;$$('[data-select]').forEach(b=>b.onclick=()=>{state.adminSelected=+b.dataset.select;drawDraft()});$('#selKind').onchange=e=>{p.kind=e.target.value;if(p.kind==='study')p.type='view';drawDraft()};if($('#selType'))$('#selType').onchange=e=>{p.type=e.target.value;p.answers=[];p.pairs=[];drawDraft()};$('#selRep').onchange=e=>{if(e.target.checked)state.draft.forEach(x=>x.rep=x.id===p.id);else p.rep=false;drawDraft()};if($('#setAnswer'))$('#setAnswer').onclick=()=>openAnswerEditor(p);if($('#craftFile'))$('#craftFile').onchange=e=>{if(e.target.files[0])p.craftImage=URL.createObjectURL(e.target.files[0]);toast('완성 예시 이미지를 넣었어요.')};if($('#craftText'))$('#craftText').onchange=e=>p.craftText=e.target.value;$('#moveLeft').onclick=()=>{const i=state.adminSelected;if(i<=0)return;[state.draft[i-1],state.draft[i]]=[state.draft[i],state.draft[i-1]];state.adminSelected--;drawDraft()};$('#moveRight').onclick=()=>{const i=state.adminSelected;if(i>=state.draft.length-1)return;[state.draft[i+1],state.draft[i]]=[state.draft[i],state.draft[i+1]];state.adminSelected++;drawDraft()};$('#deleteSelected').onclick=()=>{state.draft.splice(state.adminSelected,1);if(state.draft.length&&!state.draft.some(x=>x.rep))state.draft[0].rep=true;state.adminSelected=Math.max(0,state.adminSelected-1);drawDraft()};let dragId=null;$$('.photo-thumb').forEach(btn=>{btn.ondragstart=()=>dragId=btn.dataset.id;btn.ondragover=e=>e.preventDefault();btn.ondrop=e=>{e.preventDefault();const a=state.draft.findIndex(x=>x.id===dragId),z=state.draft.findIndex(x=>x.id===btn.dataset.id);if(a<0||z<0)return;const [x]=state.draft.splice(a,1);state.draft.splice(z,0,x);state.adminSelected=z;drawDraft()}})}
 function openAnswerEditor(p){state.editorItem=p;const title=p.type==='line'?'선긋기 정답 연결':'정답 위치 지정';$('#answerTitle').textContent=title;const existing=p.type==='line'?(p.pairs||[]).flatMap((q,i)=>[{...q.a,alt:false,n:i+1},{...q.b,alt:true,n:i+1}]):(p.answers||[]).map((q,i)=>({...q,n:i+1}));$('#answerEditor').innerHTML=`<div class="answer-editor"><div class="answer-help">${p.type==='line'?'정답 한 쌍씩 <b>시작점 → 도착점</b> 순서로 터치하세요.':'이미지에서 정답 위치를 차례대로 터치하세요.'}</div><div class="answer-stage" id="answerStage"><img id="answerImg" src="${p.url}" alt="">${existing.map(d=>`<span class="dot ${d.alt?'alt':''}" style="left:${d.x*100}%;top:${d.y*100}%"></span>`).join('')}</div><div class="mini-actions"><button id="answerUndo">↶ 마지막 취소</button><button id="answerClear" class="danger">모두 지우기</button><button id="answerDone" class="primary">설정 완료</button></div></div>`;answerDialog.showModal();let pending=null;$('#answerStage').onclick=e=>{const r=$('#answerStage').getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;if(p.type==='line'){if(!pending){pending={x,y};toast('이제 연결될 도착점을 눌러주세요.')}else{p.pairs=p.pairs||[];p.pairs.push({a:pending,b:{x,y}});pending=null;openAnswerEditorRefresh(p)}}else{p.answers=p.answers||[];p.answers.push({x,y,r:.06});openAnswerEditorRefresh(p)}};$('#answerUndo').onclick=()=>{if(p.type==='line')p.pairs.pop();else p.answers.pop();openAnswerEditorRefresh(p)};$('#answerClear').onclick=()=>{p.pairs=[];p.answers=[];openAnswerEditorRefresh(p)};$('#answerDone').onclick=()=>{answerDialog.close();drawDraft()}}
 function openAnswerEditorRefresh(p){answerDialog.close();setTimeout(()=>openAnswerEditor(p),0)}
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
 async function initApp(){
+ await loadStorageSettings();
  const saved=await dbGet('weeks');if(Array.isArray(saved)&&saved.length)weeks=saved;
  let migrated=false;weeks=weeks.map(w=>{if(!w.department){migrated=true;return{...w,department:'infant'}}return w});if(migrated)await persistWeeks();
  const infantSaved=await dbGet(deptSettingsKey('infant'));
@@ -1332,6 +1401,9 @@ async function initApp(){
  if(!infantSaved&&oldBg)await dbSet(deptSettingsKey('infant'),{mainBackground:oldBg});
  state.departmentSettings.infant=infantSaved||{mainBackground:oldBg||null};
  state.departmentSettings.elementary=elementarySaved||{mainBackground:null};
+ await loadRuntimeCloudConfig();
+ const cloudLoaded=await publicCloudLoad();
+ if(cloudLoaded){const i=state.departmentSettings.infant||{mainBackground:null},e=state.departmentSettings.elementary||{mainBackground:null};state.departmentSettings={infant:i,elementary:e}}
  state.mainBackground=null;state.department=null;renderDepartmentGate()
 }
 initApp();
