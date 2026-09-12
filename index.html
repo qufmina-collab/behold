@@ -1287,8 +1287,9 @@ const rep=isSamson?'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAVEAAAH5CAIAAA
   $$('[data-start]').forEach(b=>b.onclick=()=>startMode(b.dataset.start)); 
   $$('[data-m]').forEach(b=>b.onclick=()=>{state.month=+b.dataset.m;renderHome()}); 
   $$('[data-weekid]').forEach(b=>b.onclick=()=>{const x=departmentWeeks().find(w=>w.id===b.dataset.weekid);if(x){state.week=x;state.month=x.month;renderHome()}}); 
-  $('#yearPrev').onclick=()=>toast('연도 자료는 등록되는 대로 자동 표시돼요.');
-  $('#yearNext').onclick=()=>toast('연도 자료는 등록되는 대로 자동 표시돼요.');
+  const yearPrev=$('#yearPrev'),yearNext=$('#yearNext');
+  if(yearPrev)yearPrev.onclick=()=>toast('연도 자료는 등록되는 대로 자동 표시돼요.');
+  if(yearNext)yearNext.onclick=()=>toast('연도 자료는 등록되는 대로 자동 표시돼요.');
   preloadNearbyHomeImages(w);
 }
 function startMode(mode){let i=state.week.pages.findIndex(p=>p.kind==='study');if(i<0)i=0;openWeekSequence(state.week,Math.max(0,i))}
