@@ -1010,6 +1010,7 @@ async function loadDriveFolderTest(){
  if(!r.ok)throw new Error('API '+r.status);
  const data=await r.json();
  if(!data?.ok||!Array.isArray(data.materials))throw new Error(data?.error||'Drive 자료 형식 오류');
+ state.driveBackgrounds={infant:data.backgrounds?.infant||'',elementary:data.backgrounds?.elementary||''};
  weeks=data.materials.map(driveMaterialToWeek).filter(w=>w.pages.length).sort((a,b)=>weekISO(b).localeCompare(weekISO(a))||a.department.localeCompare(b.department));
  if(!weeks.length)throw new Error('Drive에 등록된 활동지가 없어요.');
  state.week=weeks[0];
@@ -1020,9 +1021,9 @@ async function postDrive(action,payload={},pin=state.pin){
  const r=await fetch(DRIVE_FOLDER_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,pin,...payload})});
  const data=await r.json();if(!data?.ok)throw new Error(data?.error||'Drive 저장 실패');return data;
 }
-function applyDriveData(data){weeks=data.materials.map(driveMaterialToWeek).filter(w=>w.pages.length).sort((a,b)=>weekISO(b).localeCompare(weekISO(a))||a.department.localeCompare(b.department));state.week=latestWeek();preloadWeekAssets(state.week,0);}
+function applyDriveData(data){state.driveBackgrounds={infant:data.backgrounds?.infant||'',elementary:data.backgrounds?.elementary||''};weeks=data.materials.map(driveMaterialToWeek).filter(w=>w.pages.length).sort((a,b)=>weekISO(b).localeCompare(weekISO(a))||a.department.localeCompare(b.department));state.week=latestWeek();state.mainBackground=state.driveBackgrounds[state.department]||null;preloadWeekAssets(state.week,0);preloadImage(state.mainBackground);}
 
-const state={multiTouchActive:false,traceStrokeStart:null,week,month:8,index:0,color:COLORS[0],found:0,lineStart:null,lines:[],fills:[],tracePoints:[],brushStrokes:[],activeBrush:null,brushSize:6,drawing:false,logoTaps:[],draft:[],pin:localStorage.getItem('behold-pin')||'4857',editorItem:null,adminSelected:0,editWeekId:null,adminTab:'driveguide',repImage:null,mainBackground:null,department:null,departmentSettings:{infant:{mainBackground:null},elementary:{mainBackground:null}},storage:{clientId:'434700776620-ani5vp4f7nfv26m29n9g0irg7qledg62.apps.googleusercontent.com',appId:'434700776620',folderId:'1iCHWojBMNoJTUXD38yDIIN1ooG9BsycC',folderUrl:'https://drive.google.com/drive/u/1/folders/1iCHWojBMNoJTUXD38yDIIN1ooG9BsycC',pickerApiKey:'',connected:false,metadataFileId:'',infantFolderId:'',elementaryFolderId:'',lastCloudSync:'',pendingSync:false},sequence:[],sequencePos:0};
+const state={multiTouchActive:false,traceStrokeStart:null,week,month:8,index:0,color:COLORS[0],found:0,lineStart:null,lines:[],fills:[],tracePoints:[],brushStrokes:[],activeBrush:null,brushSize:6,drawing:false,logoTaps:[],draft:[],pin:localStorage.getItem('behold-pin')||'4857',editorItem:null,adminSelected:0,editWeekId:null,adminTab:'driveguide',repImage:null,mainBackground:null,driveBackgrounds:{infant:'',elementary:''},department:null,departmentSettings:{infant:{mainBackground:null},elementary:{mainBackground:null}},storage:{clientId:'434700776620-ani5vp4f7nfv26m29n9g0irg7qledg62.apps.googleusercontent.com',appId:'434700776620',folderId:'1iCHWojBMNoJTUXD38yDIIN1ooG9BsycC',folderUrl:'https://drive.google.com/drive/u/1/folders/1iCHWojBMNoJTUXD38yDIIN1ooG9BsycC',pickerApiKey:'',connected:false,metadataFileId:'',infantFolderId:'',elementaryFolderId:'',lastCloudSync:'',pendingSync:false},sequence:[],sequencePos:0};
 const app=$('#app'), searchDialog=$('#searchDialog'), pinDialog=$('#pinDialog'), answerDialog=$('#answerDialog');
 function typeLabel(t){return TYPE_LABEL[t]||'활동지'}
 const DB_NAME='behold-local-v1', STORE='app';
@@ -1176,8 +1177,9 @@ function deptSettingsKey(d){return `settings:${d||'infant'}`}
 async function loadDepartmentSettings(d){
   const saved=await dbGet(deptSettingsKey(d));
   const cfg=saved&&typeof saved==='object'?saved:{};
-  state.departmentSettings[d]={mainBackground:cfg.mainBackground||null};
+  state.departmentSettings[d]={mainBackground:state.driveBackgrounds[d]||cfg.mainBackground||null};
   state.mainBackground=state.departmentSettings[d].mainBackground;
+  preloadImage(state.mainBackground);
 }
 async function saveDepartmentSettings(){
   const d=state.department||'infant';
@@ -1566,6 +1568,12 @@ const renderAdminTabOriginal=renderAdminTab;
 renderAdminTab=function(t){
  const b=$('#adminBody');
  if(t==='coordinates'){renderCoordinateAdmin(b);return}
+ if(t==='background'){
+  const name=state.department==='elementary'?'초등부_배경.jpg':'유아부_배경.jpg';
+  b.innerHTML=`<section class="panel admin-clean-panel admin-spaced-panel background-settings-panel"><h2>${deptLabel(state.department)} 공용 배경</h2><p class="hint">BEHOLD Drive 루트에 <b>${name}</b> 파일을 넣으면 모든 사용자에게 같은 배경이 보여요.</p><div class="main-bg-preview">${state.mainBackground?`<img src="${state.mainBackground}" alt="현재 공용 배경">`:'<span>현재 기본 배경 사용 중</span>'}</div><p class="storage-note">이미지를 교체한 뒤 아래 버튼을 누르세요. JPG, JPEG, PNG 모두 사용할 수 있지만 파일명은 <b>${name}</b> 형식을 지켜주세요.</p><button class="primary" id="reloadBackground">Drive 배경 새로고침</button></section>`;
+  $('#reloadBackground').onclick=async()=>{try{toast('Drive 공용 배경을 확인하는 중…');const data=await postDrive('refresh');applyDriveData(data);renderHome()}catch(e){toast(e.message||'배경 새로고침 실패')}};
+  return;
+ }
  renderAdminTabOriginal(t);
  if(t==='driveguide'&&$('#reloadDrive')){
   const status=b.querySelector('.storage-status');if(status)status.textContent='Drive 연결됨 · 목록 캐시 사용 중';
