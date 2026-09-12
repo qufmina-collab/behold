@@ -974,6 +974,24 @@ const week={id:'w35',year:2026,month:8,week:35,date:'8월 30일',passage:'사사
 ]};
 const DRIVE_FOLDER_API='https://script.google.com/macros/s/AKfycbyZXfYvg0_Zlkl97GdgXaWCgCJKrdiaWD2KJcda_ERDJVmPTxQlv6y1oLQ3JQAuO5p9/exec';
 let weeks=[];
+// 화면 전환 전에 필요한 Drive 이미지만 조용히 받아 둔다.
+const imagePreloadCache=new Map();
+function preloadImage(url){
+ if(!url||imagePreloadCache.has(url))return imagePreloadCache.get(url)||Promise.resolve();
+ const task=new Promise(resolve=>{const img=new Image();img.decoding='async';img.onload=()=>resolve(true);img.onerror=()=>{imagePreloadCache.delete(url);resolve(false)};img.src=url});
+ imagePreloadCache.set(url,task);return task;
+}
+function preloadWeekAssets(w,startIndex=0){
+ if(!w)return;
+ const urls=[w.representative,...(w.pages||[]).slice(Math.max(0,startIndex),Math.max(0,startIndex)+3).map(p=>p.image)].filter(Boolean);
+ const run=()=>urls.forEach(preloadImage);
+ if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:900});else setTimeout(run,0);
+}
+function preloadNearbyHomeImages(w){
+ const targetTime=new Date(weekISO(w)||0).getTime();
+ const list=departmentWeeks().filter(x=>x.id!==w?.id).sort((a,b)=>Math.abs(new Date(weekISO(a)||0).getTime()-targetTime)-Math.abs(new Date(weekISO(b)||0).getTime()-targetTime));
+ [w,...list.slice(0,2)].filter(Boolean).forEach((x,i)=>i?preloadImage(x.representative):preloadWeekAssets(x,0));
+}
 function driveMaterialToWeek(m,idx){
  const pages=(m.activities||[]).map((a,i)=>({
   id:a.id||('drive-'+idx+'-'+i),kind:a.kind||'activity',type:a.type||'view',title:a.title||a.name||('활동지 '+(i+1)),
@@ -995,13 +1013,14 @@ async function loadDriveFolderTest(){
  weeks=data.materials.map(driveMaterialToWeek).filter(w=>w.pages.length).sort((a,b)=>weekISO(b).localeCompare(weekISO(a))||a.department.localeCompare(b.department));
  if(!weeks.length)throw new Error('Drive에 등록된 활동지가 없어요.');
  state.week=weeks[0];
+ preloadWeekAssets(state.week,0);
  return true;
 }
 async function postDrive(action,payload={},pin=state.pin){
  const r=await fetch(DRIVE_FOLDER_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,pin,...payload})});
  const data=await r.json();if(!data?.ok)throw new Error(data?.error||'Drive 저장 실패');return data;
 }
-function applyDriveData(data){weeks=data.materials.map(driveMaterialToWeek).filter(w=>w.pages.length).sort((a,b)=>weekISO(b).localeCompare(weekISO(a))||a.department.localeCompare(b.department));state.week=latestWeek();}
+function applyDriveData(data){weeks=data.materials.map(driveMaterialToWeek).filter(w=>w.pages.length).sort((a,b)=>weekISO(b).localeCompare(weekISO(a))||a.department.localeCompare(b.department));state.week=latestWeek();preloadWeekAssets(state.week,0);}
 
 const state={multiTouchActive:false,traceStrokeStart:null,week,month:8,index:0,color:COLORS[0],found:0,lineStart:null,lines:[],fills:[],tracePoints:[],brushStrokes:[],activeBrush:null,brushSize:6,drawing:false,logoTaps:[],draft:[],pin:localStorage.getItem('behold-pin')||'4857',editorItem:null,adminSelected:0,editWeekId:null,adminTab:'driveguide',repImage:null,mainBackground:null,department:null,departmentSettings:{infant:{mainBackground:null},elementary:{mainBackground:null}},storage:{clientId:'434700776620-ani5vp4f7nfv26m29n9g0irg7qledg62.apps.googleusercontent.com',appId:'434700776620',folderId:'1iCHWojBMNoJTUXD38yDIIN1ooG9BsycC',folderUrl:'https://drive.google.com/drive/u/1/folders/1iCHWojBMNoJTUXD38yDIIN1ooG9BsycC',pickerApiKey:'',connected:false,metadataFileId:'',infantFolderId:'',elementaryFolderId:'',lastCloudSync:'',pendingSync:false},sequence:[],sequencePos:0};
 const app=$('#app'), searchDialog=$('#searchDialog'), pinDialog=$('#pinDialog'), answerDialog=$('#answerDialog');
@@ -1207,7 +1226,8 @@ function buildWeekSequence(startWeek){
 function openWeekSequence(w,pageIndex=0){
  state.week=w;state.month=w.month;state.sequence=buildWeekSequence(w);
  let pos=state.sequence.findIndex(x=>x.week.id===w.id&&x.index===pageIndex);if(pos<0)pos=0;state.sequencePos=pos;
- const cur=state.sequence[pos];if(cur){state.week=cur.week;state.index=cur.index}else state.index=pageIndex;renderPage();
+ const cur=state.sequence[pos];if(cur){state.week=cur.week;state.index=cur.index}else state.index=pageIndex;
+ preloadImage(state.week.representative);preloadWeekAssets(state.week,state.index);renderPage();
 }
 function renderHome(){document.body.classList.remove('activity-view');document.documentElement.classList.remove('activity-view');document.body.classList.remove('department-gate-view'); 
    
@@ -1256,6 +1276,7 @@ const rep=isSamson?'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAVEAAAH5CAIAAA
   $$('[data-weekid]').forEach(b=>b.onclick=()=>{const x=departmentWeeks().find(w=>w.id===b.dataset.weekid);if(x){state.week=x;state.month=x.month;renderHome()}}); 
   $('#yearPrev').onclick=()=>toast('연도 자료는 등록되는 대로 자동 표시돼요.');
   $('#yearNext').onclick=()=>toast('연도 자료는 등록되는 대로 자동 표시돼요.');
+  preloadNearbyHomeImages(w);
 }
 function startMode(mode){let i=state.week.pages.findIndex(p=>p.kind==='study');if(i<0)i=0;openWeekSequence(state.week,Math.max(0,i))}
 function renderPage(){
@@ -1389,7 +1410,7 @@ function setupPinchZoom(p){
 function resetActivity(){state.found=0;state.lineStart=null;state.lines=[];state.fills=[];state.tracePoints=[];state.brushStrokes=[];state.activeBrush=null;state.drawing=false;state.multiTouchActive=false;state.traceStrokeStart=null}
 
 
-function move(d){if(state.sequence&&state.sequence.length){const np=state.sequencePos+d;if(np<0||np>=state.sequence.length)return;state.sequencePos=np;const cur=state.sequence[np];state.week=cur.week;state.month=cur.week.month;state.index=cur.index;renderPage();return}const ni=state.index+d;if(ni<0||ni>=state.week.pages.length)return;state.index=ni;renderPage()}
+function move(d){if(state.sequence&&state.sequence.length){const np=state.sequencePos+d;if(np<0||np>=state.sequence.length)return;state.sequencePos=np;const cur=state.sequence[np];state.week=cur.week;state.month=cur.week.month;state.index=cur.index;preloadWeekAssets(state.week,state.index);renderPage();return}const ni=state.index+d;if(ni<0||ni>=state.week.pages.length)return;state.index=ni;preloadWeekAssets(state.week,state.index);renderPage()}
 function setupActivity(p){const stage=$('#stage'),img=$('#pageImg'),cv=$('#overlay');function fit(){const r=stage.getBoundingClientRect();cv.width=Math.max(1,Math.round(r.width*devicePixelRatio));cv.height=Math.max(1,Math.round(r.height*devicePixelRatio));cv.style.width=r.width+'px';cv.style.height=r.height+'px';drawOverlay()}img.onload=fit;new ResizeObserver(fit).observe(stage);if(p.kind==='study'||p.type==='craft'){cv.style.pointerEvents='none';return}
 if(p.type==='color'){const point=e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}};cv.addEventListener('pointerdown',e=>{state.drawing=true;cv.setPointerCapture(e.pointerId);state.activeBrush={erase:state.color===null,color:state.color||'#000',size:state.brushSize,points:[point(e)]};state.brushStrokes.push(state.activeBrush);drawOverlay()});cv.addEventListener('pointermove',e=>{if(!state.drawing||!state.activeBrush)return;state.activeBrush.points.push(point(e));drawOverlay()});const stop=()=>{state.drawing=false;state.activeBrush=null};cv.addEventListener('pointerup',stop);cv.addEventListener('pointercancel',stop);return}
 if(p.type==='trace'||p.type==='write'){cv.addEventListener('pointerdown',e=>{if(state.multiTouchActive)return;state.traceStrokeStart=state.tracePoints.length;state.drawing=true;cv.setPointerCapture(e.pointerId);addTrace(e,true)});cv.addEventListener('pointermove',e=>{if(state.multiTouchActive)return;if(state.drawing)addTrace(e,false)});const stopTrace=()=>{state.drawing=false;state.traceStrokeStart=null};cv.addEventListener('pointerup',stopTrace);cv.addEventListener('pointercancel',stopTrace);cv.addEventListener('lostpointercapture',stopTrace);return}
