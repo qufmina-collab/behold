@@ -910,11 +910,21 @@ body.activity-view .crayon-palette{
 .activity-nav .next{justify-self:end!important}
 .activity-reset{justify-self:center;min-width:104px;height:46px;padding:0 15px;border:0;border-radius:16px;background:rgba(255,255,255,.97);color:#47657e;font-weight:900;font-size:15px;box-shadow:0 4px 14px rgba(39,75,108,.13);display:flex;align-items:center;justify-content:center;gap:5px}
 .activity-reset:active{transform:translateY(1px)}
+.activity-action-group{justify-self:center;display:flex;align-items:center;gap:8px}
+.activity-undo{min-width:92px;color:#8b5a2b;background:#fff8df}
 @media(max-width:560px){.activity-reset{min-width:92px;height:42px;padding:0 11px;font-size:13px}}
+@media(max-width:400px){.activity-action-group{gap:4px}.activity-action-group .activity-reset{min-width:78px;padding:0 7px;font-size:12px}}
 @media(min-width:768px){.activity-reset{min-width:120px;height:50px;font-size:16px}}
 .activity-home-cta{width:min(86vw,520px);margin:2px auto 0;border:0;border-radius:18px;padding:13px 18px;background:linear-gradient(#9aeeaa,#72d889);color:#245b32;font-size:17px;font-weight:1000;box-shadow:0 5px 0 #4eb86b,0 9px 18px rgba(58,145,80,.16)}
 .activity-home-cta:active{transform:translateY(1px)}
 @media(max-width:560px){.activity-home-cta{font-size:15px;padding:11px 14px;border-radius:16px}}
+
+/* 활동지 바깥에 별도 흰 판을 만들지 않는다. */
+body.activity-view .simple-page-view,
+body.activity-view .activity-viewport,
+body.activity-view .simple-page-stage,
+body.activity-view .simple-page-stage>img{background:transparent!important}
+body.activity-view .simple-page-stage{box-shadow:none!important;border-radius:0!important}
 
 
 /* v35: reliable admin scrolling after leaving activity viewer */
@@ -1295,7 +1305,7 @@ function renderPage(){
    </div>
    <div class="activity-nav" aria-label="활동지 이동">
      <button class="pager-arrow prev" id="prev" aria-label="이전">‹</button>
-     <button class="activity-reset" id="activityReset" type="button" aria-label="다시하기">↻ <span>다시하기</span></button>
+     <div class="activity-action-group">${p.type==='color'?`<button class="activity-reset activity-undo" id="activityUndo" type="button" aria-label="직전 색칠 취소">↶ <span>직전 취소</span></button>`:''}<button class="activity-reset" id="activityReset" type="button" aria-label="다시하기">↻ <span>다시하기</span></button></div>
      <button class="pager-arrow next" id="next" aria-label="다음">›</button>
    </div>
    ${((state.sequence&&state.sequence.length&&state.sequencePos===state.sequence.length-1)||(!state.sequence?.length&&state.index===state.week.pages.length-1))?`<button class="activity-home-cta" id="activityHomeCta" type="button">🎉 다 했어요! 홈으로 가기</button>`:''}
@@ -1317,6 +1327,8 @@ function renderPage(){
  $('#next').onclick=()=>move(1);
  const resetBtn=$('#activityReset');
  if(resetBtn)resetBtn.onclick=()=>{resetActivity();drawOverlay();};
+ const undoBtn=$('#activityUndo');
+ if(undoBtn)undoBtn.onclick=()=>{if(state.brushStrokes.length){state.brushStrokes.pop();state.activeBrush=null;state.drawing=false;drawOverlay()}else toast('취소할 색칠이 없어요.')};
  const homeCta=$('#activityHomeCta');
  if(homeCta)homeCta.onclick=renderHome;
  if(p.type==='color'){
@@ -1390,7 +1402,7 @@ function setupPinchZoom(p){
    const cx=(a[0].x+a[1].x)/2,cy=(a[0].y+a[1].y)/2;
    const c=center(),qx=cx-c.left-c.x,qy=cy-c.top-c.y;
    gesture={dist:Math.hypot(dx,dy)||1,scale,contentX:(qx-panX)/scale,contentY:(qy-panY)/scale};
-   if(p.type==='color'&&state.activeBrush){if((state.activeBrush.points||[]).length<=3)state.brushStrokes.pop();state.drawing=false;state.activeBrush=null;drawOverlay()}
+   if(p.type==='color'&&state.activeBrush){const i=state.brushStrokes.lastIndexOf(state.activeBrush);if(i>=0)state.brushStrokes.splice(i,1);state.drawing=false;state.activeBrush=null;drawOverlay()}
    if((p.type==='trace'||p.type==='write')&&state.drawing){if(Number.isInteger(state.traceStrokeStart))state.tracePoints.splice(state.traceStrokeStart);state.drawing=false;state.traceStrokeStart=null;drawOverlay()}
  };
  viewport.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2)beginGesture()},true);
@@ -1414,7 +1426,7 @@ function resetActivity(){state.found=0;state.lineStart=null;state.lines=[];state
 
 function move(d){if(state.sequence&&state.sequence.length){const np=state.sequencePos+d;if(np<0||np>=state.sequence.length)return;state.sequencePos=np;const cur=state.sequence[np];state.week=cur.week;state.month=cur.week.month;state.index=cur.index;preloadWeekAssets(state.week,state.index);renderPage();return}const ni=state.index+d;if(ni<0||ni>=state.week.pages.length)return;state.index=ni;preloadWeekAssets(state.week,state.index);renderPage()}
 function setupActivity(p){const stage=$('#stage'),img=$('#pageImg'),cv=$('#overlay');function fit(){const r=stage.getBoundingClientRect();cv.width=Math.max(1,Math.round(r.width*devicePixelRatio));cv.height=Math.max(1,Math.round(r.height*devicePixelRatio));cv.style.width=r.width+'px';cv.style.height=r.height+'px';drawOverlay()}img.onload=fit;new ResizeObserver(fit).observe(stage);if(p.kind==='study'||p.type==='craft'){cv.style.pointerEvents='none';return}
-if(p.type==='color'){const point=e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}};cv.addEventListener('pointerdown',e=>{state.drawing=true;cv.setPointerCapture(e.pointerId);state.activeBrush={erase:state.color===null,color:state.color||'#000',size:state.brushSize,points:[point(e)]};state.brushStrokes.push(state.activeBrush);drawOverlay()});cv.addEventListener('pointermove',e=>{if(!state.drawing||!state.activeBrush)return;state.activeBrush.points.push(point(e));drawOverlay()});const stop=()=>{state.drawing=false;state.activeBrush=null};cv.addEventListener('pointerup',stop);cv.addEventListener('pointercancel',stop);return}
+if(p.type==='color'){const point=e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}};cv.addEventListener('pointerdown',e=>{if(state.multiTouchActive||!e.isPrimary)return;state.drawing=true;cv.setPointerCapture(e.pointerId);state.activeBrush={erase:state.color===null,color:state.color||'#000',size:state.brushSize,points:[point(e)]};state.brushStrokes.push(state.activeBrush);drawOverlay()});cv.addEventListener('pointermove',e=>{if(state.multiTouchActive||!e.isPrimary||!state.drawing||!state.activeBrush)return;state.activeBrush.points.push(point(e));drawOverlay()});const stop=()=>{state.drawing=false;state.activeBrush=null};cv.addEventListener('pointerup',stop);cv.addEventListener('pointercancel',stop);cv.addEventListener('lostpointercapture',stop);return}
 if(p.type==='trace'||p.type==='write'){cv.addEventListener('pointerdown',e=>{if(state.multiTouchActive)return;state.traceStrokeStart=state.tracePoints.length;state.drawing=true;cv.setPointerCapture(e.pointerId);addTrace(e,true)});cv.addEventListener('pointermove',e=>{if(state.multiTouchActive)return;if(state.drawing)addTrace(e,false)});const stopTrace=()=>{state.drawing=false;state.traceStrokeStart=null};cv.addEventListener('pointerup',stopTrace);cv.addEventListener('pointercancel',stopTrace);cv.addEventListener('lostpointercapture',stopTrace);return}
 cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;if(p.type==='line')lineTap(p,x,y);if(p.type==='find'||p.type==='ox')checkPoint(p,x,y)})}
 function addTrace(e,brk=false){const cv=$('#overlay'),r=cv.getBoundingClientRect();state.tracePoints.push({x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height,brk});drawOverlay()}
