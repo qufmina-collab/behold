@@ -1038,6 +1038,44 @@ body:not(.activity-view) #app{overflow:visible!important;height:auto!important;m
   .home-hero + .section-card{margin-top:24px !important;}
 }
 
+
+/* ===== 2026-09-17 UI polish ===== */
+/* Weekly green block: full-width straight edges, no rounded corners. */
+.weekly-message-zone{
+  border-radius:0 !important;
+}
+@media(max-width:560px){
+  .weekly-message-zone{border-radius:0 !important;}
+}
+/* Final activity: cleaner compact home CTA. */
+.activity-home-cta{
+  width:auto !important;
+  min-width:210px;
+  max-width:calc(100% - 32px);
+  min-height:52px;
+  margin:8px auto 4px !important;
+  padding:12px 24px !important;
+  border:2px solid rgba(255,255,255,.95) !important;
+  border-radius:999px !important;
+  background:linear-gradient(180deg,#55c8ff 0%,#269fe9 100%) !important;
+  color:#fff !important;
+  font-size:17px !important;
+  font-weight:1000 !important;
+  box-shadow:0 5px 0 #177fc3,0 10px 18px rgba(28,132,199,.20) !important;
+}
+.activity-home-cta:active{transform:translateY(2px)!important;box-shadow:0 3px 0 #177fc3,0 6px 12px rgba(28,132,199,.18)!important;}
+@media(max-width:560px){
+  .activity-home-cta{min-width:200px;min-height:48px;padding:10px 20px!important;font-size:16px!important;}
+}
+
+/* ===== 2026-09-17 page base color match ===== */
+/* Match the page background behind lower home sections to the BEHOLD header blue. */
+body:not(.activity-view){
+  background:#90ddff !important;
+}
+body:not(.activity-view) #app{
+  background:#90ddff !important;
+}
 </style>
 </head>
 <body>
@@ -1404,7 +1442,7 @@ function renderPage(){
      <div class="activity-action-group">${p.type==='color'?`<button class="activity-reset activity-undo" id="activityUndo" type="button" aria-label="직전 색칠 취소">↶ <span>직전 취소</span></button>`:''}<button class="activity-reset" id="activityReset" type="button" aria-label="다시하기">↻ <span>다시하기</span></button></div>
      <button class="pager-arrow next" id="next" aria-label="다음">›</button>
    </div>
-   ${((state.sequence&&state.sequence.length&&state.sequencePos===state.sequence.length-1)||(!state.sequence?.length&&state.index===state.week.pages.length-1))?`<button class="activity-home-cta" id="activityHomeCta" type="button">🎉 다 했어요! 홈으로 가기</button>`:''}
+   ${((state.sequence&&state.sequence.length&&state.sequencePos===state.sequence.length-1)||(!state.sequence?.length&&state.index===state.week.pages.length-1))?`<button class="activity-home-cta" id="activityHomeCta" type="button">⌂ 홈으로 가기</button>`:''}
    ${p.type==='color'?`<div class="crayon-palette" id="crayonPalette" aria-label="색상 선택">
       <button type="button" data-crayon="#ef4444" title="빨강" style="--c:#ef4444"></button>
       <button type="button" data-crayon="#f97316" title="주황" style="--c:#f97316"></button>
