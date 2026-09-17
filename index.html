@@ -1076,6 +1076,23 @@ body:not(.activity-view){
 body:not(.activity-view) #app{
   background:#90ddff !important;
 }
+
+/* ===== 2026-09-17 button shadow refinement ===== */
+/* Keep the normal shadow as subtle as the previously pressed state. */
+.study-btn,
+.activity-home-cta{
+  box-shadow:0 1px 3px rgba(20,126,190,.16)!important;
+  transform:translateY(0);
+  transition:transform .10s ease, box-shadow .10s ease!important;
+}
+.study-btn:active,
+.activity-home-cta:active{
+  transform:translateY(2px)!important;
+  box-shadow:0 0 1px rgba(20,126,190,.10)!important;
+}
+.hero-actions,
+.activity-nav,
+.simple-activity-shell{overflow:visible!important;}
 </style>
 </head>
 <body>
@@ -1756,3 +1773,85 @@ initApp();
 })();
 </script>
 </body></html>
+
+<style id="activity-background-blue-fix">
+/* Activity viewer: use the exact same blue as the BEHOLD header/background. */
+html:has(body.activity-view),
+body.activity-view,
+body.activity-view #app,
+body.activity-view .simple-page-view,
+body.activity-view .activity-viewport {
+  background:#8edcff !important;
+}
+</style>
+
+<style id="behold-global-bg-v34">
+/* v34: one shared BEHOLD sky-blue canvas across every app page */
+:root{--behold-sky:#88dcfa}
+html,body,#app{background:var(--behold-sky)!important}
+body.activity-view,
+body.activity-view #app,
+body.activity-view .simple-page-view,
+body.activity-view .activity-viewport,
+body.activity-view .simple-page-stage{background:var(--behold-sky)!important}
+body.activity-view .simple-page-stage>img{background:transparent!important}
+/* intentional component surfaces keep their own colors */
+.department-gate-view,.department-gate{background:#fff!important}
+</style>
+
+<style id="topbar-shadow-clip-fix">
+/* Keep the 자료실/검색/홈 button shadows fully visible instead of clipping at the header edge. */
+.topbar{
+  overflow:visible !important;
+  padding-bottom:18px !important;
+}
+.top-actions,
+.icon-btn{
+  overflow:visible !important;
+}
+
+/* 2026-09-18: subtle fixed shadow; keep the press movement effect. */
+.study-btn,
+.activity-home-cta{
+  box-shadow:0 1px 3px rgba(20,126,190,.16)!important;
+  transform:translateY(0)!important;
+}
+.study-btn:active,
+.activity-home-cta:active{
+  transform:translateY(2px)!important;
+  box-shadow:0 1px 3px rgba(20,126,190,.16)!important;
+}
+</style>
+<style id="weekday-shadow-refine-20260918">
+/* Weekday buttons: give the shadows breathing room and match the thin Start button shadow. */
+.week-tabs.weekday-tabs{
+  overflow:visible !important;
+  padding:16px 6px 8px !important;
+  gap:8px !important;
+}
+.weekday-tab{
+  overflow:visible !important;
+  box-shadow:0 1px 3px rgba(20,126,190,.16) !important;
+  transform:translateY(0);
+  transition:transform .10s ease, box-shadow .10s ease !important;
+}
+.weekday-tab.active{
+  outline:2px solid #fff !important;
+  box-shadow:0 1px 3px rgba(20,126,190,.16) !important;
+}
+.weekday-tab:active{
+  transform:translateY(2px) !important;
+  box-shadow:0 1px 3px rgba(20,126,190,.16) !important;
+}
+@media(max-width:560px){
+  .week-tabs.weekday-tabs{
+    gap:6px !important;
+    padding-left:5px !important;
+    padding-right:5px !important;
+  }
+  .weekday-tab{
+    padding-left:3px !important;
+    padding-right:3px !important;
+  }
+}
+</style>
