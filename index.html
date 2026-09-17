@@ -1165,7 +1165,7 @@ async function loadDriveFolderTest(){
  state.driveBackgrounds={infant:data.backgrounds?.infant||'',elementary:data.backgrounds?.elementary||''};
  weeks=data.materials.map(driveMaterialToWeek).filter(w=>w.pages.length).sort((a,b)=>weekISO(b).localeCompare(weekISO(a))||a.department.localeCompare(b.department));
  if(!weeks.length)throw new Error('Drive에 등록된 활동지가 없어요.');
- state.week=weeks[0];
+ state.week=latestWeek();
  preloadWeekAssets(state.week,0);
  return true;
 }
@@ -1347,7 +1347,26 @@ async function saveDepartmentSettings(){
 function deptOf(w){return w.department||'infant'}
 function deptLabel(d){return d==='elementary'?'초등부':'유아부'}
 function departmentWeeks(){return weeks.filter(w=>deptOf(w)===state.department)}
-function latestWeek(){return [...departmentWeeks()].sort((a,b)=>(b.year-a.year)||String(b.isoDate||'').localeCompare(String(a.isoDate||''))||(b.week-a.week))[0]||departmentWeeks()[0]||week}
+function latestWeek(){
+ const list=departmentWeeks().filter(w=>weekISO(w));
+ if(!list.length)return departmentWeeks()[0]||week;
+ const now=new Date();
+ const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+ const thisMonday=mondayOf(today);
+ const thisWeek=list.filter(w=>mondayOf(weekISO(w))===thisMonday);
+ // 이번 주 자료가 있으면 오늘 자료를 우선, 없으면 오늘과 가장 가까운 자료를 대표로 사용한다.
+ if(thisWeek.length){
+   return [...thisWeek].sort((a,b)=>{
+     const da=Math.abs(new Date(weekISO(a)+'T12:00:00')-new Date(today+'T12:00:00'));
+     const db=Math.abs(new Date(weekISO(b)+'T12:00:00')-new Date(today+'T12:00:00'));
+     return da-db||weekISO(a).localeCompare(weekISO(b));
+   })[0];
+ }
+ // 이번 주가 비어 있으면 미래 자료를 미리 노출하지 않고, 가장 최근 지난 자료를 보여준다.
+ const past=list.filter(w=>weekISO(w)<=today).sort((a,b)=>weekISO(b).localeCompare(weekISO(a)));
+ if(past.length)return past[0];
+ return [...list].sort((a,b)=>weekISO(a).localeCompare(weekISO(b)))[0];
+}
 function weekdayKo(v){const d=new Date(v+'T12:00:00');return ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'][d.getDay()]||''}
 function mondayOf(v){const d=new Date(v+'T12:00:00'),day=d.getDay(),diff=day===0?-6:1-day;d.setDate(d.getDate()+diff);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function autoWeekNo(v){const d=new Date(v+'T12:00:00'),y=d.getFullYear(),jan4=new Date(y,0,4,12),janDay=jan4.getDay()||7,m1=new Date(jan4);m1.setDate(jan4.getDate()-(janDay-1));const mon=new Date(mondayOf(v)+'T12:00:00');return Math.floor((mon-m1)/604800000)+1}
