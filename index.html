@@ -1131,6 +1131,11 @@ body:not(.activity-view) #app{
 .search-info-row-v60.title>strong{margin:0!important;padding:0!important;font-size:clamp(19px,4.6vw,27px)!important;line-height:1.28!important;color:#6e3e1c!important;overflow-wrap:anywhere}
 .result-arrow-v60{right:14px!important;top:50%!important;transform:translateY(-50%)!important}
 @media(max-width:520px){.search-result-card-v60{grid-template-columns:40% minmax(0,1fr)!important;gap:12px!important;padding:12px 38px 12px 12px!important;min-height:164px!important}.search-preview-v60{height:148px!important;border-radius:16px!important}.search-result-info-v60{gap:13px}.search-info-row-v60>span{font-size:11px}.search-info-row-v60>b{font-size:15px}.search-info-row-v60.title>strong{font-size:18px!important}.result-arrow-v60{right:10px!important;font-size:34px!important}}
+/* main bottom spacing fix: keep bottom gap similar to card spacing */
+.home-view-bottom-spacing-fix{}
+#app:has(.home-hero){padding-bottom:18px !important;}
+#app:has(.home-hero) .section-card:last-of-type{margin-bottom:0 !important;}
+
 </style>
 
 <style id="search-condition-pill-fix">
