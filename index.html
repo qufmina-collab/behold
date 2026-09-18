@@ -146,7 +146,7 @@ body{font-family:"Arial Rounded MT Bold","Noto Sans KR","Apple SD Gothic Neo",sy
 .clear-stars{font-size:38px;letter-spacing:8px;margin-bottom:10px;filter:drop-shadow(0 4px 0 #e8b927)}
 .game-clear p{font-size:18px;font-weight:900;color:#4f6573;margin:10px 0 22px}.spark{position:absolute;font-size:28px;color:#ffe34e;text-shadow:0 3px 0 #f0b72e}.spark.s1{left:22px;top:28px;transform:rotate(-18deg)}.spark.s2{right:24px;top:20px}.spark.s3{right:44px;bottom:105px;color:#9be6ff}
 .game-clear .pop-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}.game-clear .pop-actions button{min-height:58px;border-radius:20px;font-size:18px;box-shadow:0 6px 0 rgba(64,96,112,.15)}.game-clear .again{background:linear-gradient(#fff391,#ffdb58);color:#704d13}.game-clear .continue{background:linear-gradient(#9be4ff,#68c7f5);color:#145785}
-.search-page{max-width:820px}.search-page-head{border-radius:30px;padding:22px 24px}.search-page-head h1{font-size:clamp(34px,7vw,50px);color:var(--kid-brown);font-weight:1000}.search-grid{display:grid;grid-template-columns:1fr;gap:16px}.search-result-card{display:block;width:100%;padding:0;border-radius:28px;text-align:left;overflow:hidden;background:#fffdf8;border:4px solid white;box-shadow:0 9px 0 rgba(93,72,35,.07),0 16px 28px rgba(64,83,69,.09)}.search-result-head{position:relative;padding:18px 54px 13px 18px;display:grid;grid-template-columns:auto 1fr;grid-template-areas:'badge title' '. meta';align-items:center;gap:7px 12px}.search-result-head .search-badge{position:static;grid-area:badge;background:#ffc5cf;color:#b32f3b;padding:6px 11px;font-weight:1000}.search-result-head strong{grid-area:title;margin:0;font-size:clamp(20px,4vw,28px);color:#6e3e1c;font-weight:1000}.search-result-head small{grid-area:meta;margin:0;color:#8d755e;font-size:15px}.result-arrow{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:42px;color:#6e3e1c;font-weight:1000}.search-preview{height:clamp(150px,34vw,240px);overflow:hidden;margin:0 14px 14px;border-radius:18px;background:#f4f4f4;border:1px solid #eee}.search-preview img{width:100%;height:auto;min-height:100%;aspect-ratio:auto;object-fit:cover;object-position:top center;border-radius:0;margin:0}
+.search-page{max-width:820px}.search-page-head{border-radius:30px;padding:22px 24px}.search-page-head h1{font-size:clamp(34px,7vw,50px);color:var(--kid-brown);font-weight:1000}.search-grid{display:grid;grid-template-columns:1fr;gap:16px}.search-result-card{display:block;width:100%;padding:0;border-radius:28px;text-align:left;overflow:hidden;background:#fffdf8;border:4px solid white;box-shadow:0 9px 0 rgba(93,72,35,.07),0 16px 28px rgba(64,83,69,.09)}.search-result-head{position:relative;padding:18px 54px 13px 18px;display:flex;flex-direction:column;align-items:flex-start;gap:9px}.search-result-head .search-badge{position:static;background:#eaf3ff;color:#174f8f;padding:6px 11px;font-weight:1000}.search-result-head strong{margin:0;font-size:clamp(20px,4vw,28px);color:#6e3e1c;font-weight:1000;line-height:1.3;padding-right:8px}.search-result-head small{display:none}.result-arrow{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:42px;color:#6e3e1c;font-weight:1000}.search-preview{height:clamp(150px,34vw,240px);overflow:hidden;margin:0 14px 14px;border-radius:18px;background:#f4f4f4;border:1px solid #eee}.search-preview img{width:100%;height:auto;min-height:100%;aspect-ratio:auto;object-fit:cover;object-position:top center;border-radius:0;margin:0}
 .admin-clean-panel.admin-spaced-panel{padding:30px 28px}.admin-spaced-panel h2{margin-bottom:18px}.admin-spaced-panel .muted{margin:0 0 28px;line-height:1.6}.admin-spaced-panel .field{display:grid;gap:10px;margin:0 0 24px}.admin-spaced-panel .field span{font-weight:1000}.admin-spaced-panel .field input{min-height:54px}.admin-spaced-panel .primary{margin-top:4px;min-height:52px;padding:12px 22px;border-radius:16px}
 .character-section .post-field{margin-bottom:22px}.character-section .rep-inline{margin-top:8px;gap:16px;align-items:center;flex-wrap:wrap}.character-section .rep-inline .hint{flex:1 1 220px;margin:0;line-height:1.55}.character-section+.publish-bottom{margin-top:30px}
 @media(max-width:520px){.top-actions .icon-btn{width:58px;height:58px}.search-result-head{padding:16px 48px 12px 14px;gap:6px 9px}.search-result-head strong{font-size:21px}.search-preview{height:160px}.admin-clean-panel.admin-spaced-panel{padding:24px 18px}.game-clear .pop-actions{grid-template-columns:1fr}.complete-bubble.game-clear{padding-top:54px}.clear-title{-webkit-text-stroke:5px #4aa8df}}
@@ -1093,6 +1093,52 @@ body:not(.activity-view) #app{
 .hero-actions,
 .activity-nav,
 .simple-activity-shell{overflow:visible!important;}
+
+/* ===== Archive compact UI ===== */
+.archive-dialog-card{width:min(92vw,640px);padding:22px 18px 20px;border-radius:30px}
+.archive-dialog-card h2{text-align:center;font-size:clamp(24px,5vw,32px);margin:0 0 8px}
+.archive-dialog-card .year-row{margin:10px 0 14px;gap:10px}
+.archive-dialog-card .year-board{min-width:0;flex:1;max-width:250px;padding:7px 14px;font-size:clamp(25px,5vw,32px);border-radius:18px;box-shadow:none}
+.archive-dialog-card .year-arrow{width:42px;height:42px;font-size:25px;box-shadow:0 3px 8px rgba(85,65,35,.08)}
+.archive-dialog-card .month-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.archive-dialog-card .month-btn{min-height:44px;padding:5px 2px;border-radius:14px;font-size:15px;background:#fff!important;color:#704313;border:1.5px solid #eee5d9;box-shadow:0 2px 5px rgba(75,61,35,.06)}
+.archive-dialog-card .month-btn.selected{background:#59c5f7!important;color:#fff;border-color:#59c5f7;outline:0;box-shadow:0 3px 7px rgba(45,158,240,.18)}
+.archive-dialog-card .month-week-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;overflow:visible;padding:16px 0 0}
+.archive-dialog-card .month-week-list button{padding:10px 5px;border-radius:13px;font-size:15px;box-shadow:0 2px 6px rgba(91,67,23,.08);text-align:center}
+.archive-dialog-card .month-week-list button.active{background:#59c5f7;color:#fff}
+.archive-dialog-card .archive-empty{grid-column:1/-1;padding:16px 8px}
+@media(max-width:520px){.archive-dialog-card .month-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}.archive-dialog-card .month-btn{min-height:42px;font-size:14px}.archive-dialog-card .month-week-list{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* Search dialog — archive-style clean form */
+.search-archive-style{width:min(92vw,640px);padding:28px 22px 24px;border-radius:30px;background:#fff;overflow:visible}
+.search-clean-form{display:grid;gap:20px;padding-top:48px}
+.search-clean-field{display:grid;gap:9px}
+.search-clean-field>span{font-size:18px;font-weight:1000;color:#173f76}
+.search-clean-field select,.search-clean-field input{width:100%;min-height:58px;border:1.5px solid #dce5ef;border-radius:18px;background:#fff;color:#17263a;padding:0 17px;font-size:17px;font-weight:800;outline:none;box-shadow:0 2px 7px rgba(24,63,118,.05)}
+.search-clean-field input::placeholder{color:#9aa7b6;font-weight:700}
+.search-clean-field select:focus,.search-clean-field input:focus{border-color:#1f5798;box-shadow:0 0 0 3px rgba(31,87,152,.08)}
+.search-archive-style .search-submit{min-height:58px;margin-top:22px;border-radius:18px;background:#173f76;box-shadow:0 3px 8px rgba(23,63,118,.14);font-size:18px}
+@media(max-width:520px){.search-archive-style{padding:24px 18px 20px}.search-clean-form{gap:17px;padding-top:44px}.search-clean-field select,.search-clean-field input{min-height:56px}}
+
+/* search result card: user-approved left image + right Bible/title layout */
+.search-result-card-v60{position:relative!important;display:grid!important;grid-template-columns:38% minmax(0,1fr)!important;gap:16px!important;align-items:center!important;padding:14px 48px 14px 14px!important;min-height:190px!important}
+.search-preview-v60{height:170px!important;margin:0!important;border-radius:20px!important;overflow:hidden!important;background:#f4f4f4!important}
+.search-preview-v60 img{display:block!important;width:100%!important;height:100%!important;min-height:0!important;object-fit:cover!important;object-position:top center!important}
+.search-result-info-v60{min-width:0;display:grid;gap:17px;text-align:left}
+.search-info-row-v60{display:grid;gap:5px;min-width:0}
+.search-info-row-v60>span{font-size:13px;font-weight:1000;color:#8a775f}
+.search-info-row-v60>b{font-size:18px;line-height:1.25;color:#174f8f;overflow-wrap:anywhere}
+.search-info-row-v60.title>strong{margin:0!important;padding:0!important;font-size:clamp(19px,4.6vw,27px)!important;line-height:1.28!important;color:#6e3e1c!important;overflow-wrap:anywhere}
+.result-arrow-v60{right:14px!important;top:50%!important;transform:translateY(-50%)!important}
+@media(max-width:520px){.search-result-card-v60{grid-template-columns:40% minmax(0,1fr)!important;gap:12px!important;padding:12px 38px 12px 12px!important;min-height:164px!important}.search-preview-v60{height:148px!important;border-radius:16px!important}.search-result-info-v60{gap:13px}.search-info-row-v60>span{font-size:11px}.search-info-row-v60>b{font-size:15px}.search-info-row-v60.title>strong{font-size:18px!important}.result-arrow-v60{right:10px!important;font-size:34px!important}}
+</style>
+
+<style id="search-condition-pill-fix">
+.search-page-head>div{position:relative;padding-top:4px}
+.search-page-head .search-back{position:absolute;right:0;top:2px;display:inline-flex;align-items:center;justify-content:center;border:0;background:#eef5fb;color:#173f7a;border-radius:14px;padding:9px 13px;font-size:14px;line-height:1;font-weight:900;box-shadow:none;white-space:nowrap}
+.search-page-head .search-back:active{transform:translateY(2px)}
+.search-page-head h1{padding-right:150px}
+@media(max-width:430px){.search-page-head .search-back{font-size:13px;padding:8px 11px}.search-page-head h1{padding-right:132px}}
 </style>
 </head>
 <body>
@@ -1107,7 +1153,7 @@ body:not(.activity-view) #app{
 </header>
 <main class="app-shell" id="app"></main>
 <dialog id="archiveDialog" class="dialog"><div class="dialog-card archive-dialog-card"><button class="dialog-close" data-close>×</button><h2>📁 지난 자료 찾아보기</h2><div id="archiveDialogBody"></div></div></dialog>
-<dialog id="searchDialog" class="dialog"><div class="dialog-card search-card"><button class="dialog-close" data-close>×</button><h2>🔎 활동지 검색</h2><p class="muted">조건을 고른 뒤 검색하기를 눌러주세요.</p><div class="form-grid"><label class="field full"><span>검색어</span><input id="searchInput" placeholder="삼손, 사사기, 35주차..."></label><label class="field"><span>월</span><select id="filterMonth"><option value="">전체</option></select></label><label class="field"><span>활동 종류</span><select id="filterType"><option value="">전체</option><option value="view">일반보기</option><option value="trace">따라그리기</option><option value="color">색칠하기</option><option value="line">선긋기</option><option value="find">정답찾기</option></select></label></div><button class="primary search-submit" id="searchGo">검색하기</button></div></dialog>
+<dialog id="searchDialog" class="dialog"><div class="dialog-card search-card search-archive-style"><button class="dialog-close" data-close>×</button><div class="search-clean-form"><label class="search-clean-field"><span>월</span><select id="filterMonth"><option value="">전체</option></select></label><label class="search-clean-field"><span>활동 종류</span><select id="filterType"><option value="">전체</option><option value="view">일반보기</option><option value="trace">따라그리기</option><option value="color">색칠하기</option><option value="line">선긋기</option><option value="find">정답찾기</option></select></label><label class="search-clean-field"><span>검색어</span><input id="searchInput" placeholder="성경구절, 제목, 설명 검색"></label></div><button class="primary search-submit" id="searchGo">검색하기</button></div></dialog>
 <dialog id="pinDialog" class="dialog"><form method="dialog" class="dialog-card" id="pinForm"><button type="button" class="dialog-close" data-close>×</button><h2>🔐 관리자</h2><label class="field"><span>관리자 비밀번호</span><input id="pinInput" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></label><p id="pinError" style="color:#c84a4a"></p><button class="primary" value="default">들어가기</button></form></dialog>
 <dialog id="answerDialog" class="dialog"><div class="dialog-card"><button class="dialog-close" data-close>×</button><h2 id="answerTitle">정답 설정</h2><div id="answerEditor"></div></div></dialog>
 <script>
@@ -1606,27 +1652,66 @@ function wrong(x,y){const d=document.createElement('span');d.className='wrong-po
 function drawOverlay(){const cv=$('#overlay');if(!cv)return;const ctx=cv.getContext('2d'),r=cv.getBoundingClientRect(),sx=cv.width/Math.max(1,r.width),sy=cv.height/Math.max(1,r.height);ctx.clearRect(0,0,cv.width,cv.height);ctx.save();ctx.scale(sx,sy);state.brushStrokes.forEach(st=>{if(!st.points?.length)return;ctx.save();ctx.globalCompositeOperation=st.erase?'destination-out':'source-over';ctx.strokeStyle=st.color;ctx.globalAlpha=st.erase?1:.5;ctx.lineWidth=st.size||12;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();st.points.forEach((p,i)=>{const X=p.x*r.width,Y=p.y*r.height;i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)});if(st.points.length===1){const p=st.points[0];ctx.arc(p.x*r.width,p.y*r.height,(st.size||12)/2,0,Math.PI*2);st.erase?ctx.fill():ctx.stroke()}else ctx.stroke();ctx.restore()});ctx.lineWidth=7;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#2d9ef0';state.lines.forEach(pair=>{ctx.beginPath();ctx.moveTo(pair[0].x*r.width,pair[0].y*r.height);ctx.lineTo(pair[1].x*r.width,pair[1].y*r.height);ctx.stroke()});if(state.lineStart){ctx.fillStyle='#2d9ef0';ctx.beginPath();ctx.arc(state.lineStart.x*r.width,state.lineStart.y*r.height,10,0,Math.PI*2);ctx.fill()}if(state.tracePoints.length){ctx.strokeStyle='#2f3437';ctx.lineWidth=5;ctx.globalAlpha=.78;ctx.beginPath();state.tracePoints.forEach((p,i)=>{const X=p.x*r.width,Y=p.y*r.height;if(i===0||p.brk)ctx.moveTo(X,Y);else ctx.lineTo(X,Y)});ctx.stroke();ctx.globalAlpha=1}ctx.restore()}
 $('#homeBtn').onclick=renderHome;
 function renderArchiveDialog(){
-  const year=state.archiveYear||state.week.year||2026;
-  const month=state.archiveMonth||state.month||new Date().getMonth()+1;
+  const now=new Date();
+  const year=state.archiveYear||state.week?.year||now.getFullYear();
+  const month=state.archiveMonth||state.month||now.getMonth()+1;
   state.archiveYear=year; state.archiveMonth=month;
-  const monthWeeks=departmentWeeks().filter(w=>w.year===year&&w.month===month).sort((a,b)=>a.week-b.week);
-  const icons=['📖','💗','🌱','🌼','👑','☀️','🍉','🐚','🍁','🎃','🌰','⛄'];
-  const body=document.getElementById('archiveDialogBody');
-  if(!body)return;
-  body.innerHTML=`<div class="year-row"><button class="year-arrow" id="archPrevYear">‹</button><div class="year-board">${year}년</div><button class="year-arrow" id="archNextYear">›</button></div>
-  <div class="month-grid">${Array.from({length:12},(_,i)=>`<button class="month-btn ${month===i+1?'selected':''}" data-arch-m="${i+1}">${icons[i]} ${i+1}월</button>`).join('')}</div>
-  <div class="month-week-list">${monthWeeks.map(w=>`<button data-arch-week="${w.id}">${w.week}주차 · ${w.date}</button>`).join('')||'<div class="archive-empty">이 달에 등록된 자료가 없어요.</div>'}</div>`;
-  document.getElementById('archPrevYear').onclick=()=>{state.archiveYear--;renderArchiveDialog()};
-  document.getElementById('archNextYear').onclick=()=>{state.archiveYear++;renderArchiveDialog()};
-  document.querySelectorAll('[data-arch-m]').forEach(b=>b.onclick=()=>{state.archiveMonth=+b.dataset.archM;renderArchiveDialog()});
-  document.querySelectorAll('[data-arch-week]').forEach(b=>b.onclick=()=>{const w=departmentWeeks().find(x=>x.id===b.dataset.archWeek);if(w){state.week=w;state.month=w.month;archiveDialog.close();renderHome()}});
+  const all=departmentWeeks();
+  const monthWeeks=all.filter(w=>w.year===year&&w.month===month).sort((a,b)=>archiveDay(a)-archiveDay(b));
+  const byDay=new Map(); monthWeeks.forEach(w=>{const d=archiveDay(w);if(d&&!byDay.has(d))byDay.set(d,w)});
+  const firstDay=new Date(year,month-1,1).getDay();
+  const lastDay=new Date(year,month,0).getDate();
+  const today=(now.getFullYear()===year&&now.getMonth()+1===month)?now.getDate():-1;
+  const years=[...new Set(all.map(w=>w.year).filter(Boolean).concat([year]))].sort((a,b)=>b-a);
+  const cells=[];
+  for(let i=0;i<firstDay;i++) cells.push('<span class="archive-day blank"></span>');
+  for(let d=1;d<=lastDay;d++){
+    const w=byDay.get(d), cls=['archive-day',w?'has-data':'no-data',d===today?'today':''].filter(Boolean).join(' ');
+    cells.push(w?`<button class="${cls}" data-arch-week="${w.id}">${d}</button>`:`<span class="${cls}">${d}</span>`);
+  }
+  const body=document.getElementById('archiveDialogBody'); if(!body)return;
+  body.innerHTML=`
+    <div class="archive-calendar-head">
+      <button class="archive-nav" id="archPrevMonth" aria-label="이전 달">‹</button>
+      <div class="archive-date-pickers">
+        <button class="archive-date-pick" id="archYearPick">${year}년</button>
+        <button class="archive-date-pick" id="archMonthPick">${month}월</button>
+      </div>
+      <button class="archive-nav" id="archNextMonth" aria-label="다음 달">›</button>
+    </div>
+    <div class="archive-picker-panel" id="archPickerPanel" hidden></div>
+    <div class="archive-weekdays"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+    <div class="archive-calendar-grid">${cells.join('')}</div>
+    <div class="archive-selected-wrap" id="archiveSelectedWrap"></div>`;
+  const shiftMonth=(delta)=>{let y=state.archiveYear,m=state.archiveMonth+delta;if(m<1){m=12;y--}if(m>12){m=1;y++}state.archiveYear=y;state.archiveMonth=m;renderArchiveDialog()};
+  $('#archPrevMonth').onclick=()=>shiftMonth(-1); $('#archNextMonth').onclick=()=>shiftMonth(1);
+  const panel=$('#archPickerPanel');
+  $('#archYearPick').onclick=()=>{panel.hidden=false;panel.innerHTML=`<div class="archive-choice-grid years">${years.map(y=>`<button class="archive-choice ${y===year?'selected':''}" data-pick-year="${y}">${y}년</button>`).join('')}</div>`;$$('[data-pick-year]').forEach(b=>b.onclick=()=>{state.archiveYear=+b.dataset.pickYear;renderArchiveDialog()})};
+  $('#archMonthPick').onclick=()=>{panel.hidden=false;panel.innerHTML=`<div class="archive-choice-grid">${Array.from({length:12},(_,i)=>`<button class="archive-choice ${i+1===month?'selected':''}" data-pick-month="${i+1}">${i+1}월</button>`).join('')}</div>`;$$('[data-pick-month]').forEach(b=>b.onclick=()=>{state.archiveMonth=+b.dataset.pickMonth;renderArchiveDialog()})};
+  const showArchiveSelection=(w,button)=>{
+    $$('.archive-day.has-data').forEach(x=>x.classList.remove('selected'));
+    if(button)button.classList.add('selected');
+    const wrap=$('#archiveSelectedWrap');
+    if(!wrap||!w)return;
+    const day=archiveDay(w);
+    wrap.innerHTML=`<button class="archive-result-tab" id="archiveOpenSelected">
+      <span class="archive-result-date">${month}월 ${day}일</span>
+      <span class="archive-result-passage">${w.passage||'성경구절 미등록'}</span>
+      <strong class="archive-result-title">${w.topic||w.short||'제목 미등록'}</strong>
+      <span class="archive-result-arrow">›</span>
+    </button>`;
+    $('#archiveOpenSelected').onclick=()=>{state.week=w;state.month=w.month;archiveDialog.close();renderHome()};
+  };
+  $$('[data-arch-week]').forEach(b=>b.onclick=()=>{const w=departmentWeeks().find(x=>x.id===b.dataset.archWeek);if(w)showArchiveSelection(w,b)});
 }
+function archiveDay(w){const m=(w?.isoDate||'').match(/\d{4}-\d{2}-(\d{2})/);return m?+m[1]:(+(String(w?.date||'').match(/(\d+)일/)?.[1]||0))}
+
 const archiveBtn=document.getElementById('archiveBtn');
 if(archiveBtn) archiveBtn.onclick=()=>{document.body.classList.remove('activity-view');renderArchiveDialog();archiveDialog.showModal()};
 
 $('#searchBtn').onclick=()=>{document.body.classList.remove('activity-view');const sm=$('#filterMonth');if(sm.options.length===1)for(let i=1;i<=12;i++)sm.add(new Option(i+'월',i));searchDialog.showModal()};
 $('#searchGo').onclick=()=>{const q=$('#searchInput').value.trim().toLowerCase(),m=+$('#filterMonth').value||0,t=$('#filterType').value;searchDialog.close();renderSearchResults(q,m,t)};
-function renderSearchResults(q,m,t){const rows=[];departmentWeeks().forEach((w,wi)=>w.pages.forEach((p,pi)=>{if(m&&w.month!==m)return;if(t&&((t==='study'&&p.kind!=='study')||(t!=='study'&&p.type!==t)))return;const hay=`${w.week}주차 ${w.passage||''} ${w.topic||''} ${w.short||''} ${p.title||''} ${p.description||''} ${p.detail||''} ${typeLabel(p.type)}`.toLowerCase();if(q&&!hay.includes(q))return;rows.push({w,wi,p,pi})}));app.innerHTML=`<div class="search-page"><div class="search-page-head"><div><button class="search-back" id="searchAgain">‹ 검색조건 바꾸기</button><h1>검색 결과</h1><p class="muted">${rows.length}개의 자료를 찾았어요.</p></div></div><div class="search-grid">${rows.map(({w,wi,p,pi})=>`<button class="search-result-card" data-wi="${wi}" data-pi="${pi}"><div class="search-result-head"><span class="search-badge">${typeLabel(p.type)}</span><strong>${p.title}</strong><span class="result-arrow">›</span><small>${w.week}주차 · ${w.passage}</small></div><div class="search-preview"><img src="${p.image}" alt=""></div></button>`).join('')||'<div class="empty-search">조건에 맞는 활동지가 없어요.<br><button class="primary" id="emptyAgain">다시 검색하기</button></div>'}</div></div>`;$('#searchAgain').onclick=()=>searchDialog.showModal();if($('#emptyAgain'))$('#emptyAgain').onclick=()=>searchDialog.showModal();$$('[data-wi]').forEach(b=>b.onclick=()=>{const w=departmentWeeks()[+b.dataset.wi];openWeekSequence(w,+b.dataset.pi)})}
+function renderSearchResults(q,m,t){const rows=[];departmentWeeks().forEach((w,wi)=>w.pages.forEach((p,pi)=>{if(m&&w.month!==m)return;if(t&&((t==='study'&&p.kind!=='study')||(t!=='study'&&p.type!==t)))return;const hay=`${w.week}주차 ${w.passage||''} ${w.topic||''} ${w.short||''} ${p.title||''} ${p.description||''} ${p.detail||''} ${typeLabel(p.type)}`.toLowerCase();if(q&&!hay.includes(q))return;rows.push({w,wi,p,pi})}));app.innerHTML=`<div class="search-page"><div class="search-page-head"><div><button class="search-back" id="searchAgain" aria-label="검색조건 바꾸기">검색조건 바꾸기</button><h1>검색 결과</h1><p class="muted">${rows.length}개의 자료를 찾았어요.</p></div></div><div class="search-grid">${rows.map(({w,wi,p,pi})=>`<button class="search-result-card search-result-card-v60" data-wi="${wi}" data-pi="${pi}"><div class="search-preview search-preview-v60"><img src="${p.image}" alt=""></div><div class="search-result-info-v60"><div class="search-info-row-v60"><span>성경말씀</span><b>${w.passage||'성경구절'}</b></div><div class="search-info-row-v60 title"><span>제목</span><strong>${w.topic||p.title||'제목 없음'}</strong></div></div><span class="result-arrow result-arrow-v60">›</span></button>`).join('')||'<div class="empty-search">조건에 맞는 활동지가 없어요.<br><button class="primary" id="emptyAgain">다시 검색하기</button></div>'}</div></div>`;$('#searchAgain').onclick=()=>searchDialog.showModal();if($('#emptyAgain'))$('#emptyAgain').onclick=()=>searchDialog.showModal();$$('[data-wi]').forEach(b=>b.onclick=()=>{const w=departmentWeeks()[+b.dataset.wi];openWeekSequence(w,+b.dataset.pi)})}
 $$('[data-close]').forEach(b=>b.onclick=()=>{const d=b.closest('dialog');if(d&&d.open)d.close()});
 let logoReturnTimer=null;
 $('#logoSecret').onclick=()=>{
@@ -1791,6 +1876,43 @@ async function initApp(){
 initApp();
 })();
 </script>
+
+<style id="archive-calendar-ui">
+.archive-dialog-card{width:min(92vw,620px)!important;min-height:0!important;padding:28px 22px 34px!important;border-radius:34px!important;background:#fff!important;color:#111!important;overflow:visible!important}
+.archive-dialog-card .dialog-close{top:14px!important;right:14px!important;width:44px!important;height:44px!important;background:#f5f7fa!important;color:#123d7a!important;z-index:5}
+.archive-calendar-head{display:grid;grid-template-columns:52px 1fr 52px;align-items:center;gap:10px;margin:36px 0 28px}
+.archive-date-pickers{display:flex;justify-content:center;gap:4px}
+.archive-date-pick{border:0;background:transparent;color:#111;font-size:clamp(27px,6vw,38px);font-weight:900;padding:6px 3px;border-radius:12px}
+.archive-date-pick:active{background:#f4f7fb}
+.archive-nav{width:48px;height:48px;border:0;border-radius:50%;background:#fff;color:#123d7a;font-size:36px;line-height:1;box-shadow:0 1px 5px rgba(18,61,122,.10)}
+.archive-weekdays,.archive-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);text-align:center}
+.archive-weekdays{margin-bottom:12px;color:#59616c;font-weight:800;font-size:17px}
+.archive-weekdays span{padding:7px 0}
+.archive-calendar-grid{row-gap:8px}
+.archive-day{width:48px;height:48px;margin:auto;display:flex;align-items:center;justify-content:center;border:0;border-radius:50%;font-size:18px;background:transparent}
+.archive-day.no-data{color:#c2c7cd}
+.archive-day.has-data{color:#111;font-weight:800;cursor:pointer}
+.archive-day.has-data:active{transform:translateY(1px);background:#eef6ff}
+.archive-day.has-data.selected{background:#123d7a;color:#fff;outline:0}
+.archive-day.today{outline:1.5px solid #123d7a;outline-offset:-2px;background:transparent;color:inherit}
+.archive-day.has-data.today:not(.selected){background:transparent;color:#111;outline:1.5px solid #123d7a;outline-offset:-2px}
+.archive-day.has-data.today.selected{background:#123d7a;color:#fff;outline:0}
+.archive-day.blank{visibility:hidden}
+.archive-picker-panel{margin:-15px auto 20px;padding:12px;border:1px solid #e3eaf2;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(18,61,122,.10)}
+.archive-choice-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.archive-choice-grid.years{grid-template-columns:repeat(3,1fr);max-height:210px;overflow:auto}
+.archive-choice{border:1px solid #dbe5f1;background:#fff;color:#123d7a;border-radius:12px;padding:10px 4px;font-weight:800}
+.archive-choice.selected{background:#123d7a;color:#fff;border-color:#123d7a}
+.archive-selected-wrap{margin-top:18px;min-height:0}
+.archive-result-tab{position:relative;width:100%;display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"date passage arrow" "title title arrow";align-items:center;gap:4px 10px;text-align:left;border:1px solid #e1e8f0;background:#fff;border-radius:18px;padding:13px 38px 13px 15px;color:#123d7a;box-shadow:0 2px 7px rgba(18,61,122,.10);cursor:pointer}
+.archive-result-tab:active{transform:translateY(1px)}
+.archive-result-date{grid-area:date;font-size:13px;font-weight:900;background:#eef6ff;border-radius:10px;padding:5px 8px;white-space:nowrap}
+.archive-result-passage{grid-area:passage;font-size:14px;font-weight:800;color:#596b80;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.archive-result-title{grid-area:title;font-size:17px;line-height:1.3;color:#123d7a;margin-top:2px}
+.archive-result-arrow{grid-area:arrow;position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:30px;font-weight:700;color:#123d7a}
+@media(max-width:520px){.archive-dialog-card{padding:24px 14px 28px!important}.archive-calendar-head{grid-template-columns:46px 1fr 46px;margin:34px 0 22px}.archive-nav{width:42px;height:42px}.archive-day{width:40px;height:40px;font-size:16px}.archive-weekdays{font-size:15px}.archive-choice-grid{grid-template-columns:repeat(4,1fr)}}
+</style>
+
 </body></html>
 
 <style id="activity-background-blue-fix">
@@ -1872,5 +1994,71 @@ body.activity-view .simple-page-stage>img{background:transparent!important}
     padding-left:3px !important;
     padding-right:3px !important;
   }
+}
+</style>
+
+<style id="archive-clean-navy-ui">
+/* 지난 자료 팝업: 상단 메뉴와 동일한 네이비 + 화이트 */
+.archive-dialog-card{background:#fff!important;color:#123d7a!important}
+.archive-dialog-card>h2{display:none!important}
+.archive-dialog-card .dialog-close{color:#123d7a!important;background:#f5f8fc!important}
+.archive-dialog-card .year-board{background:#fff!important;color:#123d7a!important;border:1.5px solid #dbe5f1!important;box-shadow:none!important}
+.archive-dialog-card .year-arrow{background:#fff!important;color:#123d7a!important;border:1.5px solid #dbe5f1!important;box-shadow:none!important}
+.archive-dialog-card .month-btn{background:#fff!important;color:#123d7a!important;border:1.5px solid #dbe5f1!important;box-shadow:none!important}
+.archive-dialog-card .month-btn.selected{background:#123d7a!important;color:#fff!important;border-color:#123d7a!important;outline:0!important;box-shadow:none!important}
+.archive-dialog-card .month-week-list button{background:#fff!important;color:#123d7a!important;border:1.5px solid #dbe5f1!important;box-shadow:none!important}
+.archive-dialog-card .month-week-list button.active{background:#123d7a!important;color:#fff!important;border-color:#123d7a!important}
+.archive-dialog-card .archive-empty{color:#6b7d94!important}
+</style>
+<style id="archive-arrow-far-right-fix">
+.archive-result-tab{padding-right:48px!important}
+.archive-result-arrow{right:0!important;width:42px!important;height:100%!important;top:0!important;transform:none!important;display:flex!important;align-items:center!important;justify-content:center!important}
+</style>
+<style id="archive-arrow-edge-final">
+/* 지난자료 선택 탭: 화살표를 카드 오른쪽 테두리 바로 안쪽에 고정 */
+.archive-result-tab{padding-right:42px!important;overflow:hidden!important}
+.archive-result-arrow{
+  position:absolute!important;
+  right:4px!important;
+  top:0!important;
+  width:28px!important;
+  height:100%!important;
+  transform:none!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  font-size:30px!important;
+  line-height:1!important;
+  pointer-events:none!important;
+}
+</style>
+<style id="archive-chevron-hard-fix">
+/* 하단 자료 카드: 제목과 완전히 분리된 우측 끝 화살표 */
+.archive-result-tab{
+  position:relative!important;
+  padding-right:64px!important;
+  overflow:hidden!important;
+}
+.archive-result-tab .archive-result-title{
+  padding-right:8px!important;
+  overflow-wrap:anywhere!important;
+}
+.archive-result-tab .archive-result-arrow{display:none!important}
+.archive-result-tab::after{
+  content:'›'!important;
+  position:absolute!important;
+  right:12px!important;
+  top:50%!important;
+  transform:translateY(-50%)!important;
+  width:24px!important;
+  height:42px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  color:#123d7a!important;
+  font-size:34px!important;
+  font-weight:800!important;
+  line-height:1!important;
+  pointer-events:none!important;
 }
 </style>
