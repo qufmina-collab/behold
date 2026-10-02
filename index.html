@@ -1944,7 +1944,7 @@ archiveDialog.addEventListener('close',()=>{
   if(document.querySelector('.simple-page-view')){
     document.body.classList.add('activity-view');
     document.documentElement.classList.add('activity-view');
-    requestAnimationFrame(()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('resize'))));
+    refitCurrentActivity();
   }
 });
 
@@ -1963,9 +1963,7 @@ searchDialog.addEventListener('close',()=>{
  if(document.querySelector('.simple-page-view')){
    document.body.classList.add('activity-view');
    document.documentElement.classList.add('activity-view');
-   requestAnimationFrame(()=>requestAnimationFrame(()=>{
-     window.dispatchEvent(new Event('resize'));
-   }));
+   refitCurrentActivity();
  }
 });
 
@@ -2270,7 +2268,10 @@ renderPage=function(){
  guardedTap($('#activityReset'),()=>{if(p.type==='cut'){$('#stage')?.querySelectorAll('.cut-stamp').forEach(x=>x.remove());resetActivity();const buttons=$$('#cutPieceTray .cut-tray-item');buttons.forEach(x=>{x.disabled=false;x.classList.remove('used','selected')});const first=buttons[0];if(first){state.cutSelected=0;first.classList.add('selected')}return}resetActivity();drawOverlay()});
  if(p.type==='color')$$('#crayonPalette [data-crayon]').forEach(btn=>{if(btn.dataset.crayon===state.color)btn.classList.add('active');guardedTap(btn,()=>{state.color=btn.dataset.crayon;$$('#crayonPalette [data-crayon]').forEach(x=>x.classList.remove('active'));btn.classList.add('active')},180)});
  let initialized=false;
+ let currentActivityFit=null;
  const fit=()=>{if(!img.naturalWidth||!img.naturalHeight)return;const topbar=document.querySelector('.topbar'),topH=topbar?Math.ceil(topbar.getBoundingClientRect().height):0;document.documentElement.style.setProperty('--activity-top',topH+'px');const viewer=$('.simple-page-view');if(viewer)viewer.style.height=Math.max(180,window.innerHeight-topH)+'px';const viewport=$('#activityViewport'),statusH=$('.activity-statusbar')?.getBoundingClientRect().height||0,navH=($('.activity-nav')?.getBoundingClientRect().height||0)+6,paletteH=($('#crayonPalette')?.getBoundingClientRect().height||$('#cutPieceTray')?.getBoundingClientRect().height||0)+8,maxW=Math.max(160,(viewport?.clientWidth||window.innerWidth)-8),maxH=Math.max(160,window.innerHeight-topH-statusH-navH-paletteH-22),ratio=img.naturalWidth/img.naturalHeight;let w=maxW,h=w/ratio;if(h>maxH){h=maxH;w=h*ratio}stage.style.width=Math.floor(w)+'px';stage.style.height=Math.floor(h)+'px';const cv=$('#overlay');cv.width=Math.max(1,Math.round(w*devicePixelRatio));cv.height=Math.max(1,Math.round(h*devicePixelRatio));cv.style.width=w+'px';cv.style.height=h+'px';drawOverlay()};
+ currentActivityFit=fit;
+ window.__beholdRefitCurrentActivity=fit;
  const ready=()=>{
  if(initialized)return;
  fit();
@@ -2314,6 +2315,14 @@ document.addEventListener('click',e=>{
  if(key)beholdActivitySnapshots.delete(key);
  beholdLastActivityKey='';
 },true);
+
+/* ===== v68: popup close -> refit current activity only ===== */
+function refitCurrentActivity(){
+ if(!document.querySelector('.simple-page-view'))return;
+ const fn=window.__beholdRefitCurrentActivity;
+ if(typeof fn!=='function')return;
+ requestAnimationFrame(()=>requestAnimationFrame(()=>fn()));
+}
 
 /* ===== v64: Android/browser Back -> department home; Back on home -> exit ===== */
 let beholdHistoryHandling=false;
