@@ -1935,7 +1935,18 @@ function renderArchiveDialog(){
 function archiveDay(w){const m=(w?.isoDate||'').match(/\d{4}-\d{2}-(\d{2})/);return m?+m[1]:(+(String(w?.date||'').match(/(\d+)일/)?.[1]||0))}
 
 const archiveBtn=document.getElementById('archiveBtn');
-if(archiveBtn) archiveBtn.onclick=()=>{document.body.classList.remove('activity-view');renderArchiveDialog();archiveDialog.showModal()};
+if(archiveBtn) archiveBtn.onclick=()=>{
+  // 활동지 위에서는 activity-view를 유지한 채 자료실만 모달로 연다.
+  renderArchiveDialog();
+  archiveDialog.showModal();
+};
+archiveDialog.addEventListener('close',()=>{
+  if(document.querySelector('.simple-page-view')){
+    document.body.classList.add('activity-view');
+    document.documentElement.classList.add('activity-view');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('resize'))));
+  }
+});
 
 $('#searchBtn').onclick=()=>{
  // 검색은 현재 활동지 위에 모달로만 띄운다.
