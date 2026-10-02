@@ -1937,8 +1937,27 @@ function archiveDay(w){const m=(w?.isoDate||'').match(/\d{4}-\d{2}-(\d{2})/);ret
 const archiveBtn=document.getElementById('archiveBtn');
 if(archiveBtn) archiveBtn.onclick=()=>{document.body.classList.remove('activity-view');renderArchiveDialog();archiveDialog.showModal()};
 
-$('#searchBtn').onclick=()=>{document.body.classList.remove('activity-view');const sm=$('#filterMonth');if(sm.options.length===1)for(let i=1;i<=12;i++)sm.add(new Option(i+'월',i));searchDialog.showModal()};
+$('#searchBtn').onclick=()=>{
+ // 검색은 현재 활동지 위에 모달로만 띄운다.
+ // activity-view를 해제하면 활동지 전용 레이아웃 CSS가 풀려 뒤 화면이 찌그러진다.
+ const sm=$('#filterMonth');
+ if(sm.options.length===1)for(let i=1;i<=12;i++)sm.add(new Option(i+'월',i));
+ searchDialog.showModal();
+};
 $('#searchGo').onclick=()=>{const q=$('#searchInput').value.trim().toLowerCase(),m=+$('#filterMonth').value||0,t=$('#filterType').value;searchDialog.close();renderSearchResults(q,m,t)};
+
+searchDialog.addEventListener('close',()=>{
+ const active=document.activeElement;
+ if(active&&typeof active.blur==='function')active.blur();
+ if(document.querySelector('.simple-page-view')){
+   document.body.classList.add('activity-view');
+   document.documentElement.classList.add('activity-view');
+   requestAnimationFrame(()=>requestAnimationFrame(()=>{
+     window.dispatchEvent(new Event('resize'));
+   }));
+ }
+});
+
 function renderSearchResults(q,m,t){const rows=[];departmentWeeks().forEach((w,wi)=>w.pages.forEach((p,pi)=>{if(m&&w.month!==m)return;if(t&&((t==='study'&&p.kind!=='study')||(t!=='study'&&p.type!==t)))return;const hay=`${w.week}주차 ${w.passage||''} ${w.topic||''} ${w.short||''} ${p.title||''} ${p.description||''} ${p.detail||''} ${typeLabel(p.type)}`.toLowerCase();if(q&&!hay.includes(q))return;rows.push({w,wi,p,pi})}));app.innerHTML=`<div class="search-page"><div class="search-page-head"><div><button class="search-back" id="searchAgain" aria-label="검색조건 바꾸기">검색조건 바꾸기</button><h1>검색 결과</h1><p class="muted">${rows.length}개의 자료를 찾았어요.</p></div></div><div class="search-grid">${rows.map(({w,wi,p,pi})=>`<button class="search-result-card search-result-card-v60" data-wi="${wi}" data-pi="${pi}"><div class="search-preview search-preview-v60"><img src="${p.image}" alt=""></div><div class="search-result-info-v60"><div class="search-info-row-v60"><span>성경말씀</span><b>${w.passage||'성경구절'}</b></div><div class="search-info-row-v60 title"><span>제목</span><strong>${w.topic||p.title||'제목 없음'}</strong></div></div><span class="result-arrow result-arrow-v60">›</span></button>`).join('')||'<div class="empty-search">조건에 맞는 활동지가 없어요.<br><button class="primary" id="emptyAgain">다시 검색하기</button></div>'}</div></div>`;$('#searchAgain').onclick=()=>searchDialog.showModal();if($('#emptyAgain'))$('#emptyAgain').onclick=()=>searchDialog.showModal();$$('[data-wi]').forEach(b=>b.onclick=()=>{const w=departmentWeeks()[+b.dataset.wi];openWeekSequence(w,+b.dataset.pi)})}
 $$('[data-close]').forEach(b=>b.onclick=()=>{const d=b.closest('dialog');if(d&&d.open)d.close()});
 let logoReturnTimer=null;
