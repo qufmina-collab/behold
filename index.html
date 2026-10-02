@@ -1255,6 +1255,12 @@ body.activity-view .simple-page-stage>img.cut-stamp{width:76px!important;height:
 @media(min-width:768px) and (orientation:landscape){body.activity-view .simple-page-view{height:calc(100dvh - var(--activity-top,72px))!important}.activity-statusbar{min-height:34px;margin-bottom:2px}}
 @supports(padding:max(0px)){body.activity-view .simple-page-view{padding-bottom:max(4px,env(safe-area-inset-bottom))!important}.activity-statusbar{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}}
 </style>
+<style>
+/* v67: activity input readiness */
+#stage:not(.activity-ready) #overlay,
+#stage:not(.activity-ready) .cut-piece,
+#stage:not(.activity-ready) .cut-stamp{pointer-events:none!important}
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -2215,7 +2221,6 @@ function beholdRestoreDomWork(p){
 }
 
 renderPage=function(){
- if(beholdLastActivityKey)beholdSaveWork(beholdLastActivityKey);
  const p=state.week?.pages?.[state.index];if(!p)return renderHome();
  beholdLastActivityKey=beholdWorkKey();
  if(p.answers)p.answers.forEach(a=>a.hit=false);
@@ -2236,13 +2241,27 @@ renderPage=function(){
  if(p.type==='color')$$('#crayonPalette [data-crayon]').forEach(btn=>{if(btn.dataset.crayon===state.color)btn.classList.add('active');guardedTap(btn,()=>{state.color=btn.dataset.crayon;$$('#crayonPalette [data-crayon]').forEach(x=>x.classList.remove('active'));btn.classList.add('active')},180)});
  let initialized=false;
  const fit=()=>{if(!img.naturalWidth||!img.naturalHeight)return;const topbar=document.querySelector('.topbar'),topH=topbar?Math.ceil(topbar.getBoundingClientRect().height):0;document.documentElement.style.setProperty('--activity-top',topH+'px');const viewer=$('.simple-page-view');if(viewer)viewer.style.height=Math.max(180,window.innerHeight-topH)+'px';const viewport=$('#activityViewport'),statusH=$('.activity-statusbar')?.getBoundingClientRect().height||0,navH=($('.activity-nav')?.getBoundingClientRect().height||0)+6,paletteH=($('#crayonPalette')?.getBoundingClientRect().height||$('#cutPieceTray')?.getBoundingClientRect().height||0)+8,maxW=Math.max(160,(viewport?.clientWidth||window.innerWidth)-8),maxH=Math.max(160,window.innerHeight-topH-statusH-navH-paletteH-22),ratio=img.naturalWidth/img.naturalHeight;let w=maxW,h=w/ratio;if(h>maxH){h=maxH;w=h*ratio}stage.style.width=Math.floor(w)+'px';stage.style.height=Math.floor(h)+'px';const cv=$('#overlay');cv.width=Math.max(1,Math.round(w*devicePixelRatio));cv.height=Math.max(1,Math.round(h*devicePixelRatio));cv.style.width=w+'px';cv.style.height=h+'px';drawOverlay()};
- const ready=()=>{loading.classList.add('loaded');fit();if(!initialized){initialized=true;setupActivity(p);setupPinchZoom(p);setTimeout(()=>beholdRestoreDomWork(p),80)}};
+ const ready=()=>{
+ if(initialized)return;
+ fit();
+ initialized=true;
+ setupActivity(p);
+ setupPinchZoom(p);
+ beholdRestoreDomWork(p);
+ requestAnimationFrame(()=>{
+   stage.classList.add('activity-ready');
+   loading.classList.add('loaded');
+ });
+};
  img.onload=ready;img.onerror=()=>{loading.classList.remove('loaded');$('#imageLoadText').textContent='이미지를 불러오지 못했어요.';retry.hidden=false};
  guardedTap(retry,()=>{$('#imageLoadText').textContent='다시 불러오는 중…';retry.hidden=true;img.src='';requestAnimationFrame(()=>img.src=retryableImageUrl(pageSrc))});img.src=pageSrc;if(img.complete&&img.naturalWidth)ready();
  let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(fit,120)},{once:true});
 }
 move=function(d){
- if(state.pageTransitioning)return;let target=null;
+ if(state.pageTransitioning)return;
+ // state.week/index가 바뀌기 전에 현재 활동 상태를 확정 저장한다.
+ beholdSaveWork(beholdWorkKey());
+ let target=null;
  if(state.sequence?.length){const np=state.sequencePos+d;if(np<0)return;if(np>=state.sequence.length){if(d>0)showWeekComplete();return}target=()=>{state.sequencePos=np;const cur=state.sequence[np];state.week=cur.week;state.month=cur.week.month;state.index=cur.index}}
  else{const ni=state.index+d;if(ni<0)return;if(ni>=state.week.pages.length){if(d>0)showWeekComplete();return}target=()=>{state.index=ni}}
  state.pageTransitioning=true;const view=$('.simple-page-view');if(view)view.classList.add(d>0?'page-slide-out-left':'page-slide-out-right');setTimeout(()=>{target();state.pageEnterDirection=d;preloadWeekAssets(state.week,state.index);renderPage();state.pageTransitioning=false},185)
