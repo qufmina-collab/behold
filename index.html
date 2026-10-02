@@ -1322,16 +1322,54 @@ function driveMaterialToWeek(m,idx){
   representative:m.representative||pages[0]?.image||'',pages
  };
 }
-async function loadDriveFolderTest(){
- const r=await fetch(DRIVE_FOLDER_API+'?t='+Date.now(),{cache:'no-store'});
- if(!r.ok)throw new Error('API '+r.status);
- const data=await r.json();
+const DRIVE_CACHE_KEY='behold-drive-index-v1';
+let drivePrefetchPromise=null;
+function readDriveCache(){
+ try{
+  const raw=localStorage.getItem(DRIVE_CACHE_KEY);
+  if(!raw)return null;
+  const cached=JSON.parse(raw);
+  return cached?.data?.ok&&Array.isArray(cached.data.materials)?cached.data:null;
+ }catch(e){return null}
+}
+function writeDriveCache(data){
+ try{localStorage.setItem(DRIVE_CACHE_KEY,JSON.stringify({savedAt:Date.now(),data}))}catch(e){}
+}
+function installDriveData(data){
  if(!data?.ok||!Array.isArray(data.materials))throw new Error(data?.error||'Drive 자료 형식 오류');
  state.driveBackgrounds={infant:data.backgrounds?.infant||'',elementary:data.backgrounds?.elementary||''};
  weeks=data.materials.map(driveMaterialToWeek).filter(w=>w.pages.length).sort((a,b)=>weekISO(b).localeCompare(weekISO(a))||a.department.localeCompare(b.department));
  if(!weeks.length)throw new Error('Drive에 등록된 활동지가 없어요.');
  state.week=latestWeek();
  preloadWeekAssets(state.week,0);
+ preloadImage(state.driveBackgrounds.infant);
+ preloadImage(state.driveBackgrounds.elementary);
+ return true;
+}
+async function fetchDriveFresh(){
+ const r=await fetch(DRIVE_FOLDER_API+'?t='+Date.now(),{cache:'no-store'});
+ if(!r.ok)throw new Error('API '+r.status);
+ const data=await r.json();
+ installDriveData(data);
+ writeDriveCache(data);
+ return data;
+}
+function startDrivePrefetch(){
+ if(!drivePrefetchPromise){
+  drivePrefetchPromise=fetchDriveFresh().catch(err=>{drivePrefetchPromise=null;throw err});
+ }
+ return drivePrefetchPromise;
+}
+async function loadDriveFolderTest(){
+ const cached=readDriveCache();
+ if(cached){
+  installDriveData(cached);
+  // 캐시는 즉시 사용하고 최신 자료 확인은 뒤에서 계속 진행한다.
+  startDrivePrefetch().catch(e=>console.warn('[BEHOLD Drive refresh]',e));
+  return true;
+ }
+ // 첫 방문처럼 캐시가 없을 때만 실제 네트워크 응답을 기다린다.
+ await startDrivePrefetch();
  return true;
 }
 async function postDrive(action,payload={}){
@@ -1766,6 +1804,9 @@ function resetActivity(){state.found=0;state.lineStart=null;state.lines=[];state
 
 function showWeekComplete(){
  const old=document.getElementById('weekCompletePop');if(old)old.remove();
+ // 완료 팝업도 브라우저 방문기록 한 칸으로 취급한다.
+ // Android/브라우저 뒤로가기를 누르면 활동 화면은 유지하고 팝업만 닫힌다.
+ try{history.pushState({beholdView:'completePop'},'',location.href)}catch(e){}
  const pop=document.createElement('div');pop.id='weekCompletePop';pop.className='week-complete-pop';
  pop.innerHTML=`<div class="week-complete-card simple-complete" role="dialog" aria-modal="true" aria-label="이번 주 활동 완료">
    <h2>이번 주 활동이 끝났어요!</h2>
@@ -2133,11 +2174,76 @@ function renderCutAdmin(host){
 }
 const renderAdminPolishBase=renderAdmin;
 renderAdmin=function(tab=state.adminTab||'driveguide'){document.body.classList.remove('department-gate-view','activity-view');document.documentElement.classList.remove('activity-view');window.scrollTo(0,0);state.adminTab=tab;app.innerHTML=`<div class="admin-instagram"><div class="admin-appbar"><button class="admin-back" id="adminExit">‹</button><strong>관리자 설정</strong><span style="width:42px"></span></div><div class="admin-tabs" style="grid-template-columns:repeat(4,minmax(0,1fr))"><button data-tab="driveguide">Drive 자료</button><button data-tab="coordinates">좌표 설정</button><button data-tab="cutimages">오리기 설정</button><button data-tab="background">배경 설정</button></div><div id="adminBody"></div></div>`;$('#adminExit').onclick=()=>{state.adminToken='';state.adminSessionUntil=0;state.adminTab='driveguide';renderHome()};$$('[data-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.tab===state.adminTab);guardedTap(b,()=>{state.adminTab=b.dataset.tab;renderAdmin(state.adminTab)})});if(tab==='cutimages')renderCutAdmin($('#adminBody'));else renderAdminTab(tab)}
+/* ===== v64: Android/browser Back -> department home; Back on home -> exit ===== */
+let beholdHistoryHandling=false;
+function beholdMarkHome(){
+  try{history.replaceState({...(history.state||{}),beholdView:'home'},'',location.href)}catch(e){}
+}
+function beholdMarkSub(){
+  if(beholdHistoryHandling)return;
+  try{
+    if(history.state?.beholdView!=='sub') history.pushState({beholdView:'sub'},'',location.href);
+  }catch(e){}
+}
+
+const renderHomeHistoryBase=renderHome;
+renderHome=function(){
+  const out=renderHomeHistoryBase.apply(this,arguments);
+  beholdMarkHome();
+  return out;
+};
+
+const renderPageHistoryBase=renderPage;
+renderPage=function(){
+  beholdMarkSub();
+  return renderPageHistoryBase.apply(this,arguments);
+};
+
+const renderSearchResultsHistoryBase=renderSearchResults;
+renderSearchResults=function(){
+  beholdMarkSub();
+  return renderSearchResultsHistoryBase.apply(this,arguments);
+};
+
+const renderAdminHistoryBase=renderAdmin;
+renderAdmin=function(){
+  beholdMarkSub();
+  return renderAdminHistoryBase.apply(this,arguments);
+};
+
+window.addEventListener('popstate',e=>{
+  if(!state.department)return; // 부서 선택 전에는 브라우저 기본 뒤로가기
+
+  // 완료 팝업에서 뒤로가기: 메인으로 가지 않고 팝업만 닫기
+  const completePop=document.getElementById('weekCompletePop');
+  if(completePop){
+    completePop.remove();
+    return;
+  }
+
+  if(e.state?.beholdView==='home'){
+    beholdHistoryHandling=true;
+    try{
+      if(document.querySelector('dialog[open]')) document.querySelectorAll('dialog[open]').forEach(d=>d.close());
+      state.sequence=[];
+      state.sequencePos=0;
+      renderHomeHistoryBase();
+      window.scrollTo(0,0);
+    }finally{beholdHistoryHandling=false}
+  }
+  // 메인 화면에서 한 번 더 뒤로가기는 가로채지 않음 -> 앱/사이트 이탈
+});
+
 async function initApp(){
  state.mainBackground=null;
  state.department=null;
- // 첫 화면은 Drive 응답을 기다리지 않고 즉시 표시한다.
+ // 첫 화면은 즉시 표시하고, 사용자가 부서를 고르는 동안 Drive 자료를 미리 받는다.
+ const cached=readDriveCache();
+ if(cached){
+  try{installDriveData(cached)}catch(e){console.warn('[BEHOLD cache]',e)}
+ }
  renderDepartmentGate();
+ startDrivePrefetch().catch(e=>console.warn('[BEHOLD prefetch]',e));
 }
 
 initApp();
