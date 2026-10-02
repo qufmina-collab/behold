@@ -2079,7 +2079,7 @@ renderAdminTab=function(t){
  if(t==='coordinates'){renderCoordinateAdmin(b);return}
  if(t==='driveguide'){
   b.innerHTML=`<section class="panel admin-clean-panel admin-spaced-panel"><h2>📁 활동지 등록 방법</h2><p class="hint">아래 순서대로 Google Drive에 폴더와 활동지 이미지를 넣어주세요.</p><p class="storage-note"><b>① 부서 폴더 선택</b><br><br>📂 BEHOLD_활동지<br>　├─ 📂 유아부<br>　└─ 📂 초등부<br><br>등록할 부서의 폴더로 들어가세요.</p><p class="storage-note"><b>② 날짜별 자료 폴더 만들기</b><br><br>유아부 또는 초등부 폴더 안에 새 폴더를 만들고, 아래 형식으로 이름을 입력하세요.<br><br>📅 날짜_성경본문_제목_짧은 설명<br><br>✅ 작성 예시<br>2026-09-14_열왕기상 9장_하나님의 말씀을 끝까지 따라요_월요일 활동<br><br>⚠️ 날짜는 반드시 “2026-09-14”처럼 입력하세요.<br>⚠️ 각 항목 사이는 반드시 “_”로 구분하세요.</p><p class="storage-note"><b>③ 활동지 이미지 넣기</b><br><br>방금 만든 날짜 폴더 안에 활동지 이미지를 넣어주세요.<br><br>🖼️ 파일 이름 작성 방법<br><br>00_대표.jpg<br>01_오리기.jpg<br>02_일반보기.jpg<br>03_따라그리기.jpg<br>04_색칠하기.jpg<br>05_선긋기.jpg<br>06_정답찾기.jpg<br>07_일반보기_정답지.jpg<br><br>🔢 앞의 숫자는 앱에 표시되는 순서입니다. 숫자가 작을수록 먼저 표시됩니다.<br><br>🏠 “00_대표.jpg”<br>홈 화면 카드에 사용할 대표 이미지입니다. 없어도 됩니다.<br><br>✅ “_정답지”가 붙은 파일<br>해당 활동지의 정답으로 표시됩니다. 정답지가 없으면 넣지 않아도 됩니다.</p><p class="storage-note"><b>④ 활동지 종류 확인</b><br><br>파일 이름에는 아래 6가지 종류 중 하나를 정확히 입력하세요.<br><br>✂️ 오리기<br>📄 일반보기<br>✏️ 따라그리기<br>🎨 색칠하기<br>〰️ 선긋기<br>⭕ 정답찾기<br><br>⚠️ OX·틀린그림찾기·숨은그림찾기 활동은 파일 이름에 “정답찾기”를 사용하세요.<br>✂️ 오리기 활동은 관리자에서 투명배경 PNG 조각을 최대 12개 등록합니다.<br>앱에서는 아래 조각을 선택한 뒤 활동지를 터치하면 도장처럼 붙습니다.<br>↶ 직전 취소로 마지막 조각을 취소하고, ↻ 다시하기로 모두 지울 수 있습니다.<br><br>예시<br>01_정답찾기.jpg<br>02_정답찾기_정답지.jpg</p><p class="storage-note"><b>⑤ 배경 이미지 등록하기 · 선택사항</b><br><br>📂 BEHOLD_활동지 폴더에 아래 이름으로 넣어주세요.<br><br>🧸 유아부_배경.jpg<br>📚 초등부_배경.jpg</p><p class="storage-note"><b>⑥ 앱에 반영하기</b><br><br>모든 파일을 넣은 뒤 아래 버튼을 눌러주세요.<br><br>잠시 기다린 후 홈 화면에서 새 활동지가 표시되는지 확인하세요.</p><p class="storage-note"><b>✅ 등록 전 최종 확인</b><br><br>☐ 올바른 부서 폴더에 넣었나요?<br>☐ 날짜를 “YYYY-MM-DD” 형식으로 입력했나요?<br>☐ 폴더 이름을 “_”로 구분했나요?<br>☐ 모든 활동지 파일을 JPG 형식으로 저장했나요?<br>☐ 파일 이름 앞에 순서 숫자를 넣었나요?<br>☐ 활동지 종류를 정확히 입력했나요?<br>☐ 등록 후 Drive 자료 새로고침을 눌렀나요?</p><button class="primary" id="reloadDrive">🔄 Drive 자료 새로고침</button></section>`;
-  $('#reloadDrive').onclick=async()=>{try{toast('Drive 전체 자료를 갱신하는 중…');const data=await postDrive('refresh');applyDriveData(data);renderHome()}catch(e){toast(e.message||'새로고침 실패')}};
+  $('#reloadDrive').onclick=async()=>{try{toast('Drive 전체 자료를 갱신하는 중…');const data=await postDrive('refresh');applyDriveData(data);writeDriveCache(data);toast('완료되었습니다.')}catch(e){toast(e.message||'새로고침 실패')}};
   return;
  }
  if(t==='background'){
@@ -2092,7 +2092,7 @@ renderAdminTab=function(t){
  if(t==='driveguide'&&$('#reloadDrive')){
   const status=b.querySelector('.storage-status');if(status)status.textContent='Drive 연결됨 · 목록 캐시 사용 중';
   const hint=b.querySelector('.hint');if(hint)hint.textContent='평소에는 저장된 목록만 읽고, 새로고침할 때만 전체 Drive 폴더를 확인합니다.';
-  $('#reloadDrive').onclick=async()=>{try{toast('Drive 전체 자료를 갱신하는 중…');const data=await postDrive('refresh');applyDriveData(data);renderHome()}catch(e){toast(e.message||'새로고침 실패')}};
+  $('#reloadDrive').onclick=async()=>{try{toast('Drive 전체 자료를 갱신하는 중…');const data=await postDrive('refresh');applyDriveData(data);writeDriveCache(data);toast('완료되었습니다.')}catch(e){toast(e.message||'새로고침 실패')}};
  }
 };
 
