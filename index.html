@@ -1818,7 +1818,9 @@ function showWeekComplete(){
  document.body.appendChild(pop);
  document.getElementById('completeHome').onclick=()=>{pop.remove();renderHome()};
  document.getElementById('completeRestart').onclick=()=>{
-   pop.remove();resetActivity();
+   pop.remove();
+   beholdActivitySnapshots.clear();beholdLastActivityKey='';
+   resetActivity();
    if(state.sequence&&state.sequence.length){state.sequencePos=0;const cur=state.sequence[0];state.week=cur.week;state.month=cur.week.month;state.index=cur.index}else state.index=0;
    renderPage();
  };
@@ -2138,9 +2140,88 @@ function retryableImageUrl(src){if(!/^https?:/i.test(src||''))return src;const j
 function installStageTapGuard(stage){
  let last={time:0,x:0,y:0};stage.addEventListener('pointerup',e=>{const now=Date.now(),same=Math.hypot(e.clientX-last.x,e.clientY-last.y)<18;if(same&&now-last.time<320){e.preventDefault();e.stopImmediatePropagation();return}last={time:now,x:e.clientX,y:e.clientY}},true)
 }
+/* ===== v66: keep ALL worksheet state until Restart ===== */
+const beholdActivitySnapshots=new Map();
+let beholdLastActivityKey='';
+
+function beholdWorkKey(){
+ const p=state.week?.pages?.[state.index];
+ return p?`${state.week?.id||''}:${p.id||state.index}`:'';
+}
+function beholdClone(v){return JSON.parse(JSON.stringify(v??null))}
+function beholdSaveWork(key=beholdLastActivityKey){
+ if(!key)return;
+ const p=state.week?.pages?.[state.index];
+ const cut=(state.cutStamps||[]).map(s=>({src:s.src,x:s.x,y:s.y,index:s.index}));
+ beholdActivitySnapshots.set(key,{
+   brushStrokes:beholdClone(state.brushStrokes||[]),
+   tracePoints:beholdClone(state.tracePoints||[]),
+   lines:beholdClone(state.lines||[]),
+   lineStart:beholdClone(state.lineStart),
+   found:Number(state.found||0),
+   answerHits:(p?.answers||[]).map(a=>!!a.hit),
+   cutStamps:cut,
+   cutSelected:Number.isInteger(state.cutSelected)?state.cutSelected:-1
+ });
+}
+function beholdLoadWork(p){
+ const snap=beholdActivitySnapshots.get(beholdWorkKey());
+ if(!snap)return null;
+ state.brushStrokes=beholdClone(snap.brushStrokes||[]);
+ state.tracePoints=beholdClone(snap.tracePoints||[]);
+ state.lines=beholdClone(snap.lines||[]);
+ state.lineStart=beholdClone(snap.lineStart);
+ state.found=Number(snap.found||0);
+ (p.answers||[]).forEach((a,i)=>a.hit=!!snap.answerHits?.[i]);
+ return snap;
+}
+function beholdRestoreDomWork(p){
+ const snap=beholdActivitySnapshots.get(beholdWorkKey());
+ if(!snap)return;
+ drawOverlay();
+
+ if(p.type==='find'||p.type==='ox'){
+   $('#stage')?.querySelectorAll('.found-ring').forEach(x=>x.remove());
+   (p.answers||[]).forEach(a=>{
+     if(!a.hit)return;
+     const ring=document.createElement('span');
+     ring.className='found-ring';
+     ring.style.left=a.x*100+'%';ring.style.top=a.y*100+'%';
+     ring.style.width=((a.r||.06)*200)+'%';ring.style.aspectRatio='1';
+     $('#stage')?.appendChild(ring);
+   });
+ }
+
+ if(p.type==='cut'){
+   const stage=$('#stage'),buttons=$$('#cutPieceTray .cut-tray-item');
+   if(!stage)return;
+   stage.querySelectorAll('.cut-stamp').forEach(x=>x.remove());
+   state.cutStamps=[];
+   buttons.forEach(x=>{x.disabled=false;x.classList.remove('used','selected')});
+   (snap.cutStamps||[]).forEach(s=>{
+     const el=document.createElement('img');
+     el.className='cut-stamp';el.src=s.src;el.alt='붙인 오리기 조각';el.draggable=false;
+     el.style.width='76px';el.style.height='76px';
+     el.style.left=(s.x*100)+'%';el.style.top=(s.y*100)+'%';
+     stage.appendChild(el);
+     state.cutStamps.push({el,src:s.src,x:s.x,y:s.y,index:s.index});
+     const b=buttons[s.index];if(b){b.disabled=true;b.classList.add('used')}
+   });
+   let selected=Number.isInteger(snap.cutSelected)?snap.cutSelected:-1;
+   if(selected<0||buttons[selected]?.disabled)selected=buttons.findIndex(b=>!b.disabled);
+   state.cutSelected=selected;
+   if(selected>=0)buttons[selected]?.classList.add('selected');
+ }
+}
+
 renderPage=function(){
+ if(beholdLastActivityKey)beholdSaveWork(beholdLastActivityKey);
  const p=state.week?.pages?.[state.index];if(!p)return renderHome();
- if(p.answers)p.answers.forEach(a=>a.hit=false);resetActivity();state.completedPages=state.completedPages||new Set();
+ beholdLastActivityKey=beholdWorkKey();
+ if(p.answers)p.answers.forEach(a=>a.hit=false);
+ resetActivity();
+ beholdLoadWork(p);
+ state.completedPages=state.completedPages||new Set();
  document.body.classList.add('activity-view');document.documentElement.classList.add('activity-view');
  const pageSrc=p.type==='craft'&&p.craftImage?p.craftImage:p.image;
  app.innerHTML=`<div class="simple-page-view ${state.pageEnterDirection===-1?'page-slide-in-left':'page-slide-in-right'}">
@@ -2155,7 +2236,7 @@ renderPage=function(){
  if(p.type==='color')$$('#crayonPalette [data-crayon]').forEach(btn=>{if(btn.dataset.crayon===state.color)btn.classList.add('active');guardedTap(btn,()=>{state.color=btn.dataset.crayon;$$('#crayonPalette [data-crayon]').forEach(x=>x.classList.remove('active'));btn.classList.add('active')},180)});
  let initialized=false;
  const fit=()=>{if(!img.naturalWidth||!img.naturalHeight)return;const topbar=document.querySelector('.topbar'),topH=topbar?Math.ceil(topbar.getBoundingClientRect().height):0;document.documentElement.style.setProperty('--activity-top',topH+'px');const viewer=$('.simple-page-view');if(viewer)viewer.style.height=Math.max(180,window.innerHeight-topH)+'px';const viewport=$('#activityViewport'),statusH=$('.activity-statusbar')?.getBoundingClientRect().height||0,navH=($('.activity-nav')?.getBoundingClientRect().height||0)+6,paletteH=($('#crayonPalette')?.getBoundingClientRect().height||$('#cutPieceTray')?.getBoundingClientRect().height||0)+8,maxW=Math.max(160,(viewport?.clientWidth||window.innerWidth)-8),maxH=Math.max(160,window.innerHeight-topH-statusH-navH-paletteH-22),ratio=img.naturalWidth/img.naturalHeight;let w=maxW,h=w/ratio;if(h>maxH){h=maxH;w=h*ratio}stage.style.width=Math.floor(w)+'px';stage.style.height=Math.floor(h)+'px';const cv=$('#overlay');cv.width=Math.max(1,Math.round(w*devicePixelRatio));cv.height=Math.max(1,Math.round(h*devicePixelRatio));cv.style.width=w+'px';cv.style.height=h+'px';drawOverlay()};
- const ready=()=>{loading.classList.add('loaded');fit();if(!initialized){initialized=true;setupActivity(p);setupPinchZoom(p)}};
+ const ready=()=>{loading.classList.add('loaded');fit();if(!initialized){initialized=true;setupActivity(p);setupPinchZoom(p);setTimeout(()=>beholdRestoreDomWork(p),80)}};
  img.onload=ready;img.onerror=()=>{loading.classList.remove('loaded');$('#imageLoadText').textContent='이미지를 불러오지 못했어요.';retry.hidden=false};
  guardedTap(retry,()=>{$('#imageLoadText').textContent='다시 불러오는 중…';retry.hidden=true;img.src='';requestAnimationFrame(()=>img.src=retryableImageUrl(pageSrc))});img.src=pageSrc;if(img.complete&&img.naturalWidth)ready();
  let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(fit,120)},{once:true});
@@ -2174,6 +2255,17 @@ function renderCutAdmin(host){
 }
 const renderAdminPolishBase=renderAdmin;
 renderAdmin=function(tab=state.adminTab||'driveguide'){document.body.classList.remove('department-gate-view','activity-view');document.documentElement.classList.remove('activity-view');window.scrollTo(0,0);state.adminTab=tab;app.innerHTML=`<div class="admin-instagram"><div class="admin-appbar"><button class="admin-back" id="adminExit">‹</button><strong>관리자 설정</strong><span style="width:42px"></span></div><div class="admin-tabs" style="grid-template-columns:repeat(4,minmax(0,1fr))"><button data-tab="driveguide">Drive 자료</button><button data-tab="coordinates">좌표 설정</button><button data-tab="cutimages">오리기 설정</button><button data-tab="background">배경 설정</button></div><div id="adminBody"></div></div>`;$('#adminExit').onclick=()=>{state.adminToken='';state.adminSessionUntil=0;state.adminTab='driveguide';renderHome()};$$('[data-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.tab===state.adminTab);guardedTap(b,()=>{state.adminTab=b.dataset.tab;renderAdmin(state.adminTab)})});if(tab==='cutimages')renderCutAdmin($('#adminBody'));else renderAdminTab(tab)}
+
+/* '다시하기/다시 해보기'를 눌렀을 때만 현재 활동지의 보관본을 삭제 */
+document.addEventListener('click',e=>{
+ const b=e.target?.closest?.('button');if(!b)return;
+ const s=(b.textContent||'').replace(/\s+/g,'');
+ if(!(s.includes('다시하기')||s.includes('다시해보기')))return;
+ const key=beholdWorkKey();
+ if(key)beholdActivitySnapshots.delete(key);
+ beholdLastActivityKey='';
+},true);
+
 /* ===== v64: Android/browser Back -> department home; Back on home -> exit ===== */
 let beholdHistoryHandling=false;
 function beholdMarkHome(){
